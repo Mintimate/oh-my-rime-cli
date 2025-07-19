@@ -179,7 +179,21 @@ func getTargetDir() string {
 		// 如果注册表读取失败，回退到默认目录
 		return filepath.Join(os.Getenv("APPDATA"), "Rime")
 	case "Linux":
-		return filepath.Join(os.Getenv("HOME"), ".config", "rime")
+		// 用户选择是Fcitx5还是iBus
+		systemCheck := bufio.NewReader(os.Stdin)
+		fmt.Print("请选择Rime配置目录（1. iBus 2. Fcitx5 3. Fcitx5-Flatpak）: ")
+		choice, _ := systemCheck.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+		if choice == "1" {
+			return filepath.Join(os.Getenv("HOME"), ".config", "rime")
+		} else if choice == "2" {
+			return filepath.Join(os.Getenv("HOME"), ".local", "share", "fcitx5", "rime")
+		} else if choice == "3" {
+			return filepath.Join(os.Getenv("HOME"), ".var", "app", "org.fcitx.Fcitx5", "data", "fcitx5", "rime")
+		} else {
+			fmt.Println("无效选择，Stopping...")
+			os.Exit(1)
+		}
 	case "Darwin":
 		//用户选择是鼠须管还是小企鹅
 		systemCheck := bufio.NewReader(os.Stdin)
