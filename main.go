@@ -167,45 +167,61 @@ func getTargetDir() string {
 		// 首先尝试从注册表读取Rime用户目录
 		if rimeDir, err := getRimeUserDirFromRegistry(); err == nil {
 			if rimeDir == "" {
-				fmt.Println("从注册表获取到的Rime用户目录为空，使用默认目录...")
+				fmt.Println("从注册表获取到的Rime用户目录为空，使用默认目录:", filepath.Join(os.Getenv("APPDATA"), "Rime"))
 				return filepath.Join(os.Getenv("APPDATA"), "Rime")
 			}
-			fmt.Printf("从注册表获取到Rime用户目录: %s\n", rimeDir)
+			fmt.Println("从注册表获取到的Rime用户目录:", rimeDir)
 			return rimeDir
 		} else {
-			fmt.Printf("从注册表读取Rime目录失败: %v\n", err)
+			fmt.Println("从注册表读取Rime目录失败: ", err)
 			fmt.Println("使用默认目录...")
 		}
 		// 如果注册表读取失败，回退到默认目录
 		return filepath.Join(os.Getenv("APPDATA"), "Rime")
 	case "Linux":
-		// 用户选择是Fcitx5还是iBus
-		systemCheck := bufio.NewReader(os.Stdin)
-		fmt.Print("请选择Rime配置目录（1. iBus 2. Fcitx5 3. Fcitx5-Flatpak）: ")
-		choice, _ := systemCheck.ReadString('\n')
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Println("\n==============================")
+		fmt.Println(" 请选择 Rime 配置目录类型 ")
+		fmt.Println("==============================")
+		fmt.Println("1️⃣  iBus")
+		fmt.Println("2️⃣  Fcitx5")
+		fmt.Println("3️⃣  Fcitx5-Flatpak")
+		fmt.Println("------------------------------")
+		fmt.Print("请输入选项（1/2/3）：")
+		choice, _ := reader.ReadString('\n')
 		choice = strings.TrimSpace(choice)
-		if choice == "1" {
+		if choice == "1" || choice == "" {
+			fmt.Println("目标地址: ", filepath.Join(os.Getenv("HOME"), ".config", "rime"))
 			return filepath.Join(os.Getenv("HOME"), ".config", "rime")
 		} else if choice == "2" {
+			fmt.Println("目标地址: ", filepath.Join(os.Getenv("HOME"), ".local", "share", "fcitx5", "rime"))
 			return filepath.Join(os.Getenv("HOME"), ".local", "share", "fcitx5", "rime")
 		} else if choice == "3" {
+			fmt.Println("目标地址: ", filepath.Join(os.Getenv("HOME"), ".var", "app", "org.fcitx.Fcitx5", "data", "fcitx5", "rime"))
 			return filepath.Join(os.Getenv("HOME"), ".var", "app", "org.fcitx.Fcitx5", "data", "fcitx5", "rime")
 		} else {
-			fmt.Println("无效选择，Stopping...")
+			fmt.Println("无效选择，程序已退出。")
 			os.Exit(1)
 		}
 	case "Darwin":
-		//用户选择是鼠须管还是小企鹅
-		systemCheck := bufio.NewReader(os.Stdin)
-		fmt.Print("请选择Rime配置目录（1. 鼠须管 2. 小企鹅）: ")
-		choice, _ := systemCheck.ReadString('\n')
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Println("\n==============================")
+		fmt.Println(" 请选择 Rime 配置目录类型 ")
+		fmt.Println("==============================")
+		fmt.Println("1️⃣  鼠须管")
+		fmt.Println("2️⃣  小企鹅")
+		fmt.Println("------------------------------")
+		fmt.Print("请输入选项（1/2）：")
+		choice, _ := reader.ReadString('\n')
 		choice = strings.TrimSpace(choice)
-		if choice == "1" {
+		if choice == "1" || choice == "" {
+			fmt.Println("目标地址: ", filepath.Join(os.Getenv("HOME"), "Library", "Rime"))
 			return filepath.Join(os.Getenv("HOME"), "Library", "Rime")
 		} else if choice == "2" {
+			fmt.Println("目标地址: ", filepath.Join(os.Getenv("HOME"), ".local", "share", "fcitx5", "rime"))
 			return filepath.Join(os.Getenv("HOME"), ".local", "share", "fcitx5", "rime")
 		} else {
-			fmt.Println("无效选择，Stopping...")
+			fmt.Println("无效选择，程序已退出。")
 			os.Exit(1)
 		}
 	}
@@ -365,16 +381,19 @@ func updateDict(rime_zip []byte, targetDir string) error {
 }
 
 func showMenu() {
-	fmt.Println("\n请选择操作:")
-	fmt.Println("1. 更新主方案")
-	fmt.Println("2. 更新模型")
-	fmt.Println("3. 更新词库")
-	fmt.Println("q. 退出")
-	fmt.Print("请输入选项: ")
+	fmt.Println("\n==============================")
+	fmt.Println("   Rime 配置更新工具菜单   ")
+	fmt.Println("==============================")
+	fmt.Println("1️⃣  更新主方案")
+	fmt.Println("2️⃣  更新模型")
+	fmt.Println("3️⃣  更新词库")
+	fmt.Println("q️⃣  退出")
+	fmt.Println("------------------------------")
+	fmt.Print("请输入选项（1/2/3/q）：")
 }
 
 func main() {
-	fmt.Println("欢迎使用Rime配置更新工具")
+	fmt.Println("欢迎使用 Rime oh-my-rime 配置更新工具")
 	// 检测操作系统
 	currentOS := detectOS()
 	if currentOS == "Unknown" {
@@ -424,7 +443,7 @@ func main() {
 				fmt.Printf("更新词库失败: %v\n", err)
 			}
 		case "q":
-			fmt.Println("感谢使用，再见！")
+			fmt.Println("感谢使用记得更新后，重新部署方案以使更改生效")
 			return
 		default:
 			fmt.Println("无效选项，请重新输入")
