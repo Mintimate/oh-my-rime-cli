@@ -380,16 +380,52 @@ func updateDict(rime_zip []byte, targetDir string) error {
 	return nil
 }
 
+// 自定义更新函数
+func customUpdate() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("\n==============================")
+	fmt.Println("自定义更新功能: ")
+	fmt.Println("粘贴方案打包的 zip 文件 URL => 将下载并替换当前 Rime 配置目录下的文件")
+	fmt.Println("粘贴模型的 gram 文件 URL => 将下载并替换当前 Rime 配置目录下的同名文件")
+	fmt.Println("URL 下载失败不会更新任何文件，本质是同名文件覆盖")
+	fmt.Println("==============================")
+	fmt.Println("请粘贴 URL （例如：https://github.com/Mintimate/oh-my-rime/archive/refs/heads/main.zip）：")
+	customUrl, _ := reader.ReadString('\n')
+	customUrl = strings.TrimSpace(customUrl)
+	customZip := download(customUrl)
+	if customZip == nil {
+		fmt.Println("下载自定义方案失败，请检查 URL 或网络连接")
+		return
+	}
+	targetDir := getTargetDir()
+	// 判断文件类型
+	if strings.HasSuffix(customUrl, ".zip") {
+		// 如果是 zip 文件，更新主方案
+		if err := updateMainScheme(customZip, targetDir); err != nil {
+			fmt.Printf("更新自定义方案失败: %v\n", err)
+			return
+		}
+	} else if strings.HasSuffix(customUrl, ".gram") {
+		// 如果是 gram 文件，更新模型
+		updateModel(customZip, targetDir)
+		return
+	} else {
+		fmt.Println("不支持的文件类型，请提供 zip 或 gram 文件的 URL")
+		return
+	}
+}
+
 func showMenu() {
 	fmt.Println("\n==============================")
 	fmt.Println("   Rime 配置更新工具菜单   ")
 	fmt.Println("==============================")
-	fmt.Println("1️⃣  更新主方案")
-	fmt.Println("2️⃣  更新模型")
-	fmt.Println("3️⃣  更新词库")
-	fmt.Println("q️⃣  退出")
+	fmt.Println("1️⃣  更新薄荷方案")
+	fmt.Println("2️⃣  更新万象模型")
+	fmt.Println("3️⃣  更新万象词库（薄荷使用的 Lite 版本）")
+	fmt.Println("4️⃣  自定义更新（适用于其他方案）")
+	fmt.Println("q  退出")
 	fmt.Println("------------------------------")
-	fmt.Print("请输入选项（1/2/3/q）：")
+	fmt.Print("请输入选项（1/2/3/4/q）：")
 }
 
 func main() {
@@ -442,6 +478,9 @@ func main() {
 			if err := updateDict(rimeZip, targetDir); err != nil {
 				fmt.Printf("更新词库失败: %v\n", err)
 			}
+		case "4":
+			// 自定义更新
+			customUpdate()
 		case "q":
 			fmt.Println("感谢使用记得更新后，重新部署方案以使更改生效")
 			return
