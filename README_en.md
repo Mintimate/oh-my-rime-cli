@@ -10,32 +10,32 @@ A command-line tool for automatic update and management of Rime [Oh-my-rime](htt
 
 ```mermaid
 flowchart TD
-    A[🌟 启动程序 <br/> macOS/Linux使用终端<br/>Windows双击即可] --> B[🖥️ 检测操作系统]
-    B --支持的操作系统--> C[📋 显示主菜单]
-    B --不支持/检测失败--> I
+    A[🌟 Launch Program <br/> macOS/Linux: Use Terminal<br/>Windows: Double-click] --> B[🖥️ Detect OS]
+    B --Supported OS--> C[📋 Show Main Menu]
+    B --Unsupported/Detection Failed--> I
     
-    C --> D{"✨用户选择"}
-    D -->|① 更新方案| E[💼 下载薄荷方案包]
-    D -->|② 更新模型| F[🧠 下载万象模型]
-    D -->|③ 更新词库| G[📚 下载薄荷方案包<br/>提取词库]
-    D -->|④ 自定义| H[🔗 粘贴配置链接]
-    D -->|⏹️ 退出| I[👋 结束程序]
+    C --> D{"✨ User Choice"}
+    D -->|① Update Scheme| E[💼 Download Oh-my-rime Package]
+    D -->|② Update Model| F[🧠 Download Vision Model]
+    D -->|③ Update Dictionary| G[📚 Download Oh-my-rime Package<br/>Extract Dictionary]
+    D -->|④ Custom| H[🔗 Paste Config Link]
+    D -->|⏹️ Exit| I[👋 Terminate Program]
     
-    E --> J[📂 选择输入法目录<br/>「Linux 和 macOS 需要」]
+    E --> J[📂 Select IME Directory<br/>「Required for Linux/macOS」]
     F --> J
     G --> J
     H --> J
     
-    J --> K{🛠️ 更新类型}
-    K -->|方案更新| L[📤 解压&替换方案包]
-    K -->|模型替换| M[💾 替换模型文件]
-    K -->|词库更新| N[🔄 更新词库]
-    K -->|自定义| O{🔍 文件类型}
+    J --> K{🛠️ Update Type}
+    K -->|Scheme Update| L[📤 Extract & Replace Scheme Pack]
+    K -->|Model Replacement| M[💾 Replace Model File]
+    K -->|Dictionary Update| N[🔄 Update Dictionary]
+    K -->|Custom| O{🔍 File Type}
     
-    O -->|📦 ZIP文件| L
-    O -->|🧾 模型文件| M
+    O -->|📦 ZIP File| L
+    O -->|🧾 Model File| M
     
-    L --> P[✅ 更新成功！]
+    L --> P[✅ Update Success!]
     M --> P
     N --> P
     
