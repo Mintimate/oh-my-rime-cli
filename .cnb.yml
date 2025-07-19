@@ -1,0 +1,30 @@
+$:
+  tag_push:
+    # 上传二进制包到 release 附件
+    - docker:
+        build: .ide/Dockerfile
+      stages:
+        - name: 更新日志
+          image: cnbcool/changelog
+          exports:
+            latestChangeLog: LATEST_CHANGE_LOG
+        - name: 创建 release
+          type: git:release
+          options:
+            title: release
+            description: ${LATEST_CHANGE_LOG}
+        - name: 依赖安装和部署
+          script: zsh build.sh
+        - name: release 上传附件
+          image: cnbcool/attachments:latest
+          settings:
+            attachments:
+              - oh-my-rime-cli.exe
+              - oh-my-rime-cli-linux-amd64
+              - oh-my-rime-cli-linux-arm64
+              - oh-my-rime-cli-mac-amd64
+              - oh-my-rime-cli-mac-arm64
+          exports:
+            FILES: FILES
+        - name: 输出附件
+          script: echo $FILES
