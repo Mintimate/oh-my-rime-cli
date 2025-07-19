@@ -205,7 +205,7 @@ func getTargetDir() string {
 		} else if choice == "2" {
 			return filepath.Join(os.Getenv("HOME"), ".local", "share", "fcitx5", "rime")
 		} else {
-			fmt.Println("无效选择，默认使用鼠须管目录")
+			fmt.Println("无效选择，Stopping...")
 			os.Exit(1)
 		}
 	}
