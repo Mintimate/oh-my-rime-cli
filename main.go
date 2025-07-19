@@ -164,7 +164,19 @@ func detectOS() string {
 func getTargetDir() string {
 	switch detectOS() {
 	case "Windows_NT":
-		// Windows系统下的Rime配置目录
+		// 首先尝试从注册表读取Rime用户目录
+		if rimeDir, err := getRimeUserDirFromRegistry(); err == nil {
+			if rimeDir == "" {
+				fmt.Println("从注册表获取到的Rime用户目录为空，使用默认目录...")
+				return filepath.Join(os.Getenv("APPDATA"), "Rime")
+			}
+			fmt.Printf("从注册表获取到Rime用户目录: %s\n", rimeDir)
+			return rimeDir
+		} else {
+			fmt.Printf("从注册表读取Rime目录失败: %v\n", err)
+			fmt.Println("使用默认目录...")
+		}
+		// 如果注册表读取失败，回退到默认目录
 		return filepath.Join(os.Getenv("APPDATA"), "Rime")
 	case "Linux":
 		return filepath.Join(os.Getenv("HOME"), ".config", "rime")
