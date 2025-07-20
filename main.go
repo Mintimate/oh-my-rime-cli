@@ -56,6 +56,7 @@ func showMenu() {
 	fmt.Println("2️⃣  更新万象模型")
 	fmt.Println("3️⃣  更新万象词库（薄荷使用的 Lite 版本）")
 	fmt.Println("4️⃣  自定义更新（适用于其他方案）")
+	fmt.Println("b  打开薄荷输入法文档")
 	fmt.Println("q  退出")
 	fmt.Println("------------------------------")
 	fmt.Print("请输入选项（1/2/3/4/q）：")
@@ -72,6 +73,10 @@ func handleUserChoice(choice string) bool {
 		return handleUpdateDict()
 	case "4":
 		customUpdate()
+		return true
+	case "b":
+		fmt.Println("打开薄荷输入法文档...")
+		openUrlBrowser(AppURL)
 		return true
 	case "q":
 		fmt.Println("感谢使用！记得更新后，重新部署方案以使更改生效")

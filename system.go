@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -114,4 +115,23 @@ func getDarwinTargetDir() string {
 		os.Exit(1)
 	}
 	return ""
+}
+
+// 使用默认浏览器打开URL
+func openUrlBrowser(url string) {
+	var cmd *exec.Cmd
+	switch detectOS() {
+	case "Windows_NT":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	case "Linux":
+		cmd = exec.Command("xdg-open", url)
+	case "Darwin":
+		cmd = exec.Command("open", url)
+	default:
+		fmt.Println("不支持的操作系统，无法打开浏览器")
+		return
+	}
+	if err := cmd.Start(); err != nil {
+		fmt.Printf("打开浏览器失败: %v\n", err)
+	}
 }
