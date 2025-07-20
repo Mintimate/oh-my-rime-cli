@@ -46,20 +46,25 @@ func customUpdate() {
 
 // 显示主菜单
 func showMenu() {
-	fmt.Println("\n==============================")
-	fmt.Println("   Rime 配置更新工具菜单   ")
-	fmt.Println("原理: ")
-	fmt.Println(" 1. 下载最新的方案或模型文件 ")
-	fmt.Println(" 2. 替换当前 Rime配置目录下的同名文件 ")
-	fmt.Println("==============================")
-	fmt.Println("1️⃣  更新薄荷方案")
-	fmt.Println("2️⃣  更新万象模型")
-	fmt.Println("3️⃣  更新万象词库（薄荷使用的 Lite 版本）")
-	fmt.Println("4️⃣  自定义更新（适用于其他方案）")
-	fmt.Println("b  打开薄荷输入法文档")
-	fmt.Println("q  退出")
-	fmt.Println("------------------------------")
-	fmt.Print("请输入选项（1/2/3/4/q）：")
+	fmt.Println("\n", strings.Repeat("=", 60))
+	fmt.Println(" 作者: ", APPAuthor)
+	fmt.Println(" 开源地址: ", APPOpenSource)
+	fmt.Println("\n", strings.Repeat("=", 60))
+	fmt.Println("工作原理：")
+	fmt.Println("  • 下载最新的方案或模型文件")
+	fmt.Println("  • 替换当前 Rime 配置目录下的同名文件")
+	fmt.Println("")
+	fmt.Println("功能选项：")
+	fmt.Println("  [1] 更新薄荷方案              [2] 更新万象模型")
+	fmt.Println("  [3] 更新万象词库（Lite版）     [4] 自定义更新")
+	fmt.Println("")
+	fmt.Println("其他选项：")
+	fmt.Println("  [b] 打开作者 Bilibili (关注一下 ヾ(≧≦)〃)")
+	fmt.Println("  [d] 打开薄荷输入法文档")
+	fmt.Println("  [q] 退出程序")
+	fmt.Println("")
+	fmt.Println(strings.Repeat("-", 60))
+	fmt.Print("请输入选项 (1/2/3/4/b/d/q)：")
 }
 
 // 处理用户选择的操作
@@ -75,7 +80,11 @@ func handleUserChoice(choice string) bool {
 		customUpdate()
 		return true
 	case "b":
-		fmt.Println("打开薄荷输入法文档...")
+		fmt.Println("打开作者 Bilibili ...")
+		openUrlBrowser(APPAuthorBilibili)
+		return true
+	case "d":
+		fmt.Println("打开薄荷输入法文档 ...")
 		openUrlBrowser(AppURL)
 		return true
 	case "q":
