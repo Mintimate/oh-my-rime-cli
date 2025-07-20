@@ -11,7 +11,7 @@ $:
         - name: 创建 release
           type: git:release
           options:
-            title: 发布版本
+            latest: true
             description: ${LATEST_CHANGE_LOG}
         - name: 依赖安装和部署
           script: zsh build.sh
