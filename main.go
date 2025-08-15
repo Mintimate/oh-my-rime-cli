@@ -141,7 +141,7 @@ func handleUpdateDict() bool {
 	return true
 }
 
-func main() {
+func runInteractiveMenu() {
 	fmt.Println("欢迎使用: ", AppName)
 	fmt.Println("工具版本: ", AppVersion)
 
@@ -165,4 +165,8 @@ func main() {
 			break
 		}
 	}
+}
+
+func main() {
+	startApp()
 }

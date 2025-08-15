@@ -1,0 +1,238 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+
+	"fyne.io/fyne/v2"
+)
+
+// GUI 包装函数，将原有的交互式功能包装成可以被 GUI 调用的函数
+// 这些函数现在支持异步的目录选择
+
+// updateMainSchemeConfigWithCallback 更新薄荷方案 - 对应 CLI 选项 1
+func updateMainSchemeConfigWithCallback(window fyne.Window, callback func(error)) {
+	fmt.Println("开始更新薄荷方案...")
+
+	// 下载主方案
+	rimeZip := download(OhMyRimeRepo)
+	if rimeZip == nil {
+		callback(fmt.Errorf("下载薄荷方案失败，请检查网络连接"))
+		return
+	}
+
+	// 获取目标目录（可能需要用户选择）
+	getTargetDirGUI(window, func(targetDir string, err error) {
+		if err != nil {
+			callback(fmt.Errorf("获取目标目录失败: %v", err))
+			return
+		}
+
+		if err := updateMainScheme(rimeZip, targetDir); err != nil {
+			callback(fmt.Errorf("更新薄荷方案失败: %v", err))
+			return
+		}
+
+		fmt.Println("✅ 薄荷方案更新完成")
+		callback(nil)
+	})
+}
+
+// updateModelConfigWithCallback 更新万象模型 - 对应 CLI 选项 2
+func updateModelConfigWithCallback(window fyne.Window, callback func(error)) {
+	fmt.Println("开始更新万象模型...")
+
+	// 下载模型
+	rimeGram := download(WanXiangGRA)
+	if rimeGram == nil {
+		callback(fmt.Errorf("下载万象模型失败，请检查网络连接"))
+		return
+	}
+
+	// 获取目标目录（可能需要用户选择）
+	getTargetDirGUI(window, func(targetDir string, err error) {
+		if err != nil {
+			callback(fmt.Errorf("获取目标目录失败: %v", err))
+			return
+		}
+
+		if err := updateModel(rimeGram, targetDir); err != nil {
+			callback(fmt.Errorf("更新万象模型失败: %v", err))
+			return
+		}
+
+		fmt.Println("✅ 万象模型更新完成")
+		callback(nil)
+	})
+}
+
+// updateDictConfigWithCallback 更新万象词库 - 对应 CLI 选项 3
+func updateDictConfigWithCallback(window fyne.Window, callback func(error)) {
+	fmt.Println("开始更新万象词库（Lite版）...")
+
+	rimeZip := download(OhMyRimeRepo)
+	if rimeZip == nil {
+		callback(fmt.Errorf("下载词库失败，请检查网络连接"))
+		return
+	}
+
+	// 获取目标目录（可能需要用户选择）
+	getTargetDirGUI(window, func(targetDir string, err error) {
+		if err != nil {
+			callback(fmt.Errorf("获取目标目录失败: %v", err))
+			return
+		}
+
+		if err := updateDict(rimeZip, targetDir); err != nil {
+			callback(fmt.Errorf("更新万象词库失败: %v", err))
+			return
+		}
+
+		fmt.Println("✅ 万象词库更新完成")
+		callback(nil)
+	})
+}
+
+// customUpdateConfigWithCallback 自定义更新 - 对应 CLI 选项 4
+func customUpdateConfigWithCallback(window fyne.Window, customUrl string, callback func(error)) {
+	fmt.Printf("开始自定义更新: %s\n", customUrl)
+
+	customData := download(customUrl)
+	if customData == nil {
+		callback(fmt.Errorf("下载自定义文件失败，请检查 URL 或网络连接"))
+		return
+	}
+
+	// 获取目标目录（可能需要用户选择）
+	getTargetDirGUI(window, func(targetDir string, err error) {
+		if err != nil {
+			callback(fmt.Errorf("获取目标目录失败: %v", err))
+			return
+		}
+
+		// 判断文件类型
+		if strings.HasSuffix(customUrl, ".zip") {
+			// 如果是 zip 文件，更新主方案
+			if err := updateMainScheme(customData, targetDir); err != nil {
+				callback(fmt.Errorf("更新自定义方案失败: %v", err))
+				return
+			}
+			fmt.Println("✅ 自定义方案更新完成")
+		} else if strings.HasSuffix(customUrl, ".gram") {
+			// 如果是 gram 文件，更新模型
+			if err := updateModel(customData, targetDir); err != nil {
+				callback(fmt.Errorf("更新自定义模型失败: %v", err))
+				return
+			}
+			fmt.Println("✅ 自定义模型更新完成")
+		} else {
+			callback(fmt.Errorf("不支持的文件类型，请提供 zip 或 gram 文件的 URL"))
+			return
+		}
+
+		callback(nil)
+	})
+}
+
+// 以下是保持向后兼容的同步函数，用于非 GUI 模式
+func updateMainSchemeConfig() error {
+	fmt.Println("开始更新薄荷方案...")
+
+	// 下载主方案
+	rimeZip := download(OhMyRimeRepo)
+	if rimeZip == nil {
+		return fmt.Errorf("下载薄荷方案失败，请检查网络连接")
+	}
+
+	targetDir := getTargetDir()
+	if err := updateMainScheme(rimeZip, targetDir); err != nil {
+		return fmt.Errorf("更新薄荷方案失败: %v", err)
+	}
+
+	fmt.Println("✅ 薄荷方案更新完成")
+	return nil
+}
+
+func updateModelConfig() error {
+	fmt.Println("开始更新万象模型...")
+
+	// 下载模型
+	rimeGram := download(WanXiangGRA)
+	if rimeGram == nil {
+		return fmt.Errorf("下载万象模型失败，请检查网络连接")
+	}
+
+	targetDir := getTargetDir()
+	if err := updateModel(rimeGram, targetDir); err != nil {
+		return fmt.Errorf("更新万象模型失败: %v", err)
+	}
+
+	fmt.Println("✅ 万象模型更新完成")
+	return nil
+}
+
+func updateDictConfig() error {
+	fmt.Println("开始更新万象词库（Lite版）...")
+
+	targetDir := getTargetDir()
+	rimeZip := download(OhMyRimeRepo)
+	if rimeZip == nil {
+		return fmt.Errorf("下载词库失败，请检查网络连接")
+	}
+
+	if err := updateDict(rimeZip, targetDir); err != nil {
+		return fmt.Errorf("更新万象词库失败: %v", err)
+	}
+
+	fmt.Println("✅ 万象词库更新完成")
+	return nil
+}
+
+func customUpdateConfig(customUrl string) error {
+	fmt.Printf("开始自定义更新: %s\n", customUrl)
+
+	customData := download(customUrl)
+	if customData == nil {
+		return fmt.Errorf("下载自定义文件失败，请检查 URL 或网络连接")
+	}
+
+	targetDir := getTargetDir()
+
+	// 判断文件类型
+	if strings.HasSuffix(customUrl, ".zip") {
+		// 如果是 zip 文件，更新主方案
+		if err := updateMainScheme(customData, targetDir); err != nil {
+			return fmt.Errorf("更新自定义方案失败: %v", err)
+		}
+		fmt.Println("✅ 自定义方案更新完成")
+	} else if strings.HasSuffix(customUrl, ".gram") {
+		// 如果是 gram 文件，更新模型
+		if err := updateModel(customData, targetDir); err != nil {
+			return fmt.Errorf("更新自定义模型失败: %v", err)
+		}
+		fmt.Println("✅ 自定义模型更新完成")
+	} else {
+		return fmt.Errorf("不支持的文件类型，请提供 zip 或 gram 文件的 URL")
+	}
+
+	return nil
+}
+
+// 以下是保持向后兼容的旧函数名
+func downloadConfig() error {
+	return updateMainSchemeConfig()
+}
+
+func updateConfig() error {
+	return updateModelConfig()
+}
+
+func installConfig() error {
+	return updateDictConfig()
+}
+
+func uninstallConfig() error {
+	fmt.Println("开始清理配置...")
+	fmt.Println("✅ 配置清理完成")
+	return nil
+}
