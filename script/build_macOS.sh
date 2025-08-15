@@ -29,8 +29,8 @@ mv oh-my-rime-gui "$APP_NAME/Contents/MacOS/oh-my-rime-gui"
 
 # 创建简单的图标（使用系统默认图标）
 # 如果有icon.icns就使用，否则跳过
-if [ -f "icon.icns" ]; then
-    cp icon.icns "$APP_NAME/Contents/Resources/"
+if [ -f "script/build/macOS/icon.icns" ]; then
+    cp "script/build/macOS/icon.icns" "$APP_NAME/Contents/Resources/"
     ICON_KEY="    <key>CFBundleIconFile</key>
     <string>icon</string>"
 else
