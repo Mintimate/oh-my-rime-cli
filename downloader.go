@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+// ProgressCallback 进度回调函数类型
+type ProgressCallback func(downloaded, total int64, percentage float64, speed float64)
+
 // 进度条读取器
 type ProgressReader struct {
 	io.Reader
@@ -16,6 +19,7 @@ type ProgressReader struct {
 	Downloaded int64
 	StartTime  time.Time
 	LastUpdate time.Time
+	Callback   ProgressCallback
 }
 
 func (pr *ProgressReader) Read(p []byte) (int, error) {
@@ -26,15 +30,18 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 	now := time.Now()
 	if now.Sub(pr.LastUpdate) > 100*time.Millisecond || err == io.EOF {
 		pr.LastUpdate = now
-		pr.printProgress()
+		pr.updateProgress()
 	}
 
 	return n, err
 }
 
-func (pr *ProgressReader) printProgress() {
+func (pr *ProgressReader) updateProgress() {
 	if pr.Total <= 0 {
 		fmt.Printf("\r下载中... %s", formatBytes(pr.Downloaded))
+		if pr.Callback != nil {
+			pr.Callback(pr.Downloaded, pr.Total, 0, 0)
+		}
 		return
 	}
 
@@ -43,6 +50,11 @@ func (pr *ProgressReader) printProgress() {
 
 	// 计算下载速度
 	speed := float64(pr.Downloaded) / elapsed.Seconds()
+
+	// 调用回调函数
+	if pr.Callback != nil {
+		pr.Callback(pr.Downloaded, pr.Total, percentage, speed)
+	}
 
 	// 计算剩余时间
 	var eta string
@@ -67,6 +79,11 @@ func (pr *ProgressReader) printProgress() {
 
 // 下载文件并返回字节数据
 func download(url string) []byte {
+	return downloadWithCallback(url, nil)
+}
+
+// 带进度回调的下载函数
+func downloadWithCallback(url string, callback ProgressCallback) []byte {
 	fmt.Printf("正在下载: %s\n", url)
 
 	// 创建HTTP请求
@@ -96,6 +113,7 @@ func download(url string) []byte {
 		Total:      totalSize,
 		StartTime:  time.Now(),
 		LastUpdate: time.Now(),
+		Callback:   callback,
 	}
 
 	// 读取响应内容到内存

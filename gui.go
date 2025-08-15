@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"strings"
+	"sync"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -13,6 +15,26 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+// LogWriter 实现 io.Writer 接口，用于重定向控制台输出到GUI
+type LogWriter struct {
+	gui *GUI
+	mu  sync.Mutex
+}
+
+func (lw *LogWriter) Write(p []byte) (n int, err error) {
+	lw.mu.Lock()
+	defer lw.mu.Unlock()
+
+	message := strings.TrimSpace(string(p))
+	if message != "" {
+		// 在主线程中更新UI
+		go func() {
+			lw.gui.appendLogSafe(message)
+		}()
+	}
+	return len(p), nil
+}
+
 type GUI struct {
 	app    fyne.App
 	window fyne.Window
@@ -21,10 +43,21 @@ type GUI struct {
 	statusLabel  *widget.Label
 	progressBar  *widget.ProgressBar
 	logText      *widget.Entry
+	logScroll    *container.Scroll
 	downloadBtn  *widget.Button
 	updateBtn    *widget.Button
 	installBtn   *widget.Button
 	uninstallBtn *widget.Button
+
+	// 日志管理
+	logMutex    sync.Mutex
+	logWriter   *LogWriter
+	originalOut io.Writer
+	originalErr io.Writer
+
+	// 进度管理
+	progressMutex sync.Mutex
+	isRunning     bool
 }
 
 func NewGUI() *GUI {
@@ -41,6 +74,7 @@ func NewGUI() *GUI {
 	}
 
 	gui.setupUI()
+
 	return gui
 }
 
@@ -78,9 +112,9 @@ func (g *GUI) setupUI() {
 	g.logText.Wrapping = fyne.TextWrapWord
 	g.logText.Disable()
 
-	logContainer := container.NewBorder(logLabel, nil, nil, nil,
-		container.NewScroll(g.logText))
-	logContainer.Resize(fyne.NewSize(0, 200))
+	g.logScroll = container.NewScroll(g.logText)
+	logContainer := container.NewBorder(logLabel, nil, nil, nil, g.logScroll)
+	logContainer.Resize(fyne.NewSize(0, 250))
 
 	// 状态栏
 	statusContainer := container.NewBorder(nil, nil,
@@ -101,115 +135,79 @@ func (g *GUI) setupUI() {
 	g.window.SetContent(container.NewPadded(content))
 }
 
-func (g *GUI) appendLog(message string) {
-	current := g.logText.Text
-	if current != "" {
-		current += "\n"
-	}
-	current += message
-	g.logText.SetText(current)
-	g.logText.CursorRow = len(strings.Split(current, "\n"))
-}
-
-func (g *GUI) setStatus(status string) {
-	g.statusLabel.SetText(status)
-}
-
-func (g *GUI) showProgress() {
-	g.progressBar.Show()
-}
-
-func (g *GUI) hideProgress() {
-	g.progressBar.Hide()
-}
-
-func (g *GUI) disableButtons() {
-	g.downloadBtn.Disable()
-	g.updateBtn.Disable()
-	g.installBtn.Disable()
-	g.uninstallBtn.Disable()
-}
-
-func (g *GUI) enableButtons() {
-	g.downloadBtn.Enable()
-	g.updateBtn.Enable()
-	g.installBtn.Enable()
-	g.uninstallBtn.Enable()
-}
-
 func (g *GUI) onUpdateMainScheme() {
-	g.disableButtons()
-	g.showProgress()
-	g.setStatus("正在更新薄荷方案...")
-	g.appendLog("开始更新薄荷方案...")
+	// 在后台线程执行，避免阻塞UI
+	go func() {
+		g.startOperation("更新薄荷方案")
 
-	updateMainSchemeConfigWithCallback(g.window, func(err error) {
-		// 确保 UI 更新在主线程中执行
-		defer func() {
-			g.enableButtons()
-			g.hideProgress()
-		}()
-
-		if err != nil {
-			g.setStatus("更新失败")
-			g.appendLog(fmt.Sprintf("❌ 薄荷方案更新失败: %v", err))
-			dialog.ShowError(err, g.window)
-		} else {
-			g.setStatus("更新完成")
-			g.appendLog("✅ 薄荷方案更新完成")
-			dialog.ShowInformation("成功", "薄荷方案更新完成！", g.window)
+		// 创建进度回调函数
+		progressCallback := func(downloaded, total int64, percentage float64, speed float64) {
+			g.updateProgressSafe(percentage / 100.0)
+			speedStr := formatBytes(int64(speed))
+			g.appendLogSafe(fmt.Sprintf("下载进度: %.1f%% (%s/%s) 速度: %s/s",
+				percentage, formatBytes(downloaded), formatBytes(total), speedStr))
 		}
-	})
+
+		updateMainSchemeConfigWithProgressCallback(g.window, progressCallback, func(err error) {
+			g.finishOperation("薄荷方案更新", err)
+
+			if err != nil {
+				dialog.ShowError(err, g.window)
+			} else {
+				dialog.ShowInformation("成功", "薄荷方案更新完成！", g.window)
+			}
+		})
+	}()
 }
 
 func (g *GUI) onUpdateModel() {
-	g.disableButtons()
-	g.showProgress()
-	g.setStatus("正在更新万象模型...")
-	g.appendLog("开始更新万象模型...")
+	// 在后台线程执行，避免阻塞UI
+	go func() {
+		g.startOperation("更新万象模型")
 
-	updateModelConfigWithCallback(g.window, func(err error) {
-		// 确保 UI 更新在主线程中执行
-		defer func() {
-			g.enableButtons()
-			g.hideProgress()
-		}()
-
-		if err != nil {
-			g.setStatus("更新失败")
-			g.appendLog(fmt.Sprintf("❌ 万象模型更新失败: %v", err))
-			dialog.ShowError(err, g.window)
-		} else {
-			g.setStatus("更新完成")
-			g.appendLog("✅ 万象模型更新完成")
-			dialog.ShowInformation("成功", "万象模型更新完成！", g.window)
+		// 创建进度回调函数
+		progressCallback := func(downloaded, total int64, percentage float64, speed float64) {
+			g.updateProgressSafe(percentage / 100.0)
+			speedStr := formatBytes(int64(speed))
+			g.appendLogSafe(fmt.Sprintf("下载进度: %.1f%% (%s/%s) 速度: %s/s",
+				percentage, formatBytes(downloaded), formatBytes(total), speedStr))
 		}
-	})
+
+		updateModelConfigWithProgressCallback(g.window, progressCallback, func(err error) {
+			g.finishOperation("万象模型更新", err)
+
+			if err != nil {
+				dialog.ShowError(err, g.window)
+			} else {
+				dialog.ShowInformation("成功", "万象模型更新完成！", g.window)
+			}
+		})
+	}()
 }
 
 func (g *GUI) onUpdateDict() {
-	g.disableButtons()
-	g.showProgress()
-	g.setStatus("正在更新万象词库...")
-	g.appendLog("开始更新万象词库（Lite版）...")
+	// 在后台线程执行，避免阻塞UI
+	go func() {
+		g.startOperation("更新万象词库")
 
-	updateDictConfigWithCallback(g.window, func(err error) {
-		// 确保 UI 更新在主线程中执行
-		defer func() {
-			g.enableButtons()
-			g.hideProgress()
-		}()
-
-		if err != nil {
-			g.setStatus("更新失败")
-			g.appendLog(fmt.Sprintf("❌ 万象词库更新失败: %v", err))
-			dialog.ShowError(err, g.window)
-		} else {
-			g.setStatus("更新完成")
-			g.appendLog("✅ 万象词库更新完成")
-			dialog.ShowInformation("成功", "万象词库（Lite版）更新完成！", g.window)
+		// 创建进度回调函数
+		progressCallback := func(downloaded, total int64, percentage float64, speed float64) {
+			g.updateProgressSafe(percentage / 100.0)
+			speedStr := formatBytes(int64(speed))
+			g.appendLogSafe(fmt.Sprintf("下载进度: %.1f%% (%s/%s) 速度: %s/s",
+				percentage, formatBytes(downloaded), formatBytes(total), speedStr))
 		}
-	})
+
+		updateDictConfigWithProgressCallback(g.window, progressCallback, func(err error) {
+			g.finishOperation("万象词库更新", err)
+
+			if err != nil {
+				dialog.ShowError(err, g.window)
+			} else {
+				dialog.ShowInformation("成功", "万象词库（Lite版）更新完成！", g.window)
+			}
+		})
+	}()
 }
 
 func (g *GUI) onCustomUpdate() {
@@ -239,28 +237,29 @@ func (g *GUI) onCustomUpdate() {
 				return
 			}
 
-			g.disableButtons()
-			g.showProgress()
-			g.setStatus("正在自定义更新...")
-			g.appendLog(fmt.Sprintf("开始自定义更新: %s", customUrl))
+			// 在后台线程执行，避免阻塞UI
+			go func() {
+				g.startOperation("自定义更新")
+				g.appendLogSafe(fmt.Sprintf("URL: %s", customUrl))
 
-			customUpdateConfigWithCallback(g.window, customUrl, func(err error) {
-				// 确保 UI 更新在主线程中执行
-				defer func() {
-					g.enableButtons()
-					g.hideProgress()
-				}()
-
-				if err != nil {
-					g.setStatus("更新失败")
-					g.appendLog(fmt.Sprintf("❌ 自定义更新失败: %v", err))
-					dialog.ShowError(err, g.window)
-				} else {
-					g.setStatus("更新完成")
-					g.appendLog("✅ 自定义更新完成")
-					dialog.ShowInformation("成功", "自定义更新完成！", g.window)
+				// 创建进度回调函数
+				progressCallback := func(downloaded, total int64, percentage float64, speed float64) {
+					g.updateProgressSafe(percentage / 100.0)
+					speedStr := formatBytes(int64(speed))
+					g.appendLogSafe(fmt.Sprintf("下载进度: %.1f%% (%s/%s) 速度: %s/s",
+						percentage, formatBytes(downloaded), formatBytes(total), speedStr))
 				}
-			})
+
+				customUpdateConfigWithProgressCallback(g.window, customUrl, progressCallback, func(err error) {
+					g.finishOperation("自定义更新", err)
+
+					if err != nil {
+						dialog.ShowError(err, g.window)
+					} else {
+						dialog.ShowInformation("成功", "自定义更新完成！", g.window)
+					}
+				})
+			}()
 		}, g.window)
 }
 

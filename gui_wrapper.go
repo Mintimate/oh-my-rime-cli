@@ -8,14 +8,19 @@ import (
 )
 
 // GUI 包装函数，将原有的交互式功能包装成可以被 GUI 调用的函数
-// 这些函数现在支持异步的目录选择
+// 这些函数现在支持异步的目录选择和进度回调
 
 // updateMainSchemeConfigWithCallback 更新薄荷方案 - 对应 CLI 选项 1
 func updateMainSchemeConfigWithCallback(window fyne.Window, callback func(error)) {
+	updateMainSchemeConfigWithProgressCallback(window, nil, callback)
+}
+
+// 带进度回调的更新薄荷方案函数
+func updateMainSchemeConfigWithProgressCallback(window fyne.Window, progressCallback ProgressCallback, callback func(error)) {
 	fmt.Println("开始更新薄荷方案...")
 
 	// 下载主方案
-	rimeZip := download(OhMyRimeRepo)
+	rimeZip := downloadWithCallback(OhMyRimeRepo, progressCallback)
 	if rimeZip == nil {
 		callback(fmt.Errorf("下载薄荷方案失败，请检查网络连接"))
 		return
@@ -40,10 +45,15 @@ func updateMainSchemeConfigWithCallback(window fyne.Window, callback func(error)
 
 // updateModelConfigWithCallback 更新万象模型 - 对应 CLI 选项 2
 func updateModelConfigWithCallback(window fyne.Window, callback func(error)) {
+	updateModelConfigWithProgressCallback(window, nil, callback)
+}
+
+// 带进度回调的更新万象模型函数
+func updateModelConfigWithProgressCallback(window fyne.Window, progressCallback ProgressCallback, callback func(error)) {
 	fmt.Println("开始更新万象模型...")
 
 	// 下载模型
-	rimeGram := download(WanXiangGRA)
+	rimeGram := downloadWithCallback(WanXiangGRA, progressCallback)
 	if rimeGram == nil {
 		callback(fmt.Errorf("下载万象模型失败，请检查网络连接"))
 		return
@@ -68,9 +78,14 @@ func updateModelConfigWithCallback(window fyne.Window, callback func(error)) {
 
 // updateDictConfigWithCallback 更新万象词库 - 对应 CLI 选项 3
 func updateDictConfigWithCallback(window fyne.Window, callback func(error)) {
+	updateDictConfigWithProgressCallback(window, nil, callback)
+}
+
+// 带进度回调的更新万象词库函数
+func updateDictConfigWithProgressCallback(window fyne.Window, progressCallback ProgressCallback, callback func(error)) {
 	fmt.Println("开始更新万象词库（Lite版）...")
 
-	rimeZip := download(OhMyRimeRepo)
+	rimeZip := downloadWithCallback(OhMyRimeRepo, progressCallback)
 	if rimeZip == nil {
 		callback(fmt.Errorf("下载词库失败，请检查网络连接"))
 		return
@@ -95,9 +110,14 @@ func updateDictConfigWithCallback(window fyne.Window, callback func(error)) {
 
 // customUpdateConfigWithCallback 自定义更新 - 对应 CLI 选项 4
 func customUpdateConfigWithCallback(window fyne.Window, customUrl string, callback func(error)) {
+	customUpdateConfigWithProgressCallback(window, customUrl, nil, callback)
+}
+
+// 带进度回调的自定义更新函数
+func customUpdateConfigWithProgressCallback(window fyne.Window, customUrl string, progressCallback ProgressCallback, callback func(error)) {
 	fmt.Printf("开始自定义更新: %s\n", customUrl)
 
-	customData := download(customUrl)
+	customData := downloadWithCallback(customUrl, progressCallback)
 	if customData == nil {
 		callback(fmt.Errorf("下载自定义文件失败，请检查 URL 或网络连接"))
 		return
