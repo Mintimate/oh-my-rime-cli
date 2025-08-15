@@ -1,9 +1,10 @@
-package main
+package gui
 
 import (
 	"fmt"
 	"io"
 	"log"
+	"oh-my-rime-cli/internal/downloader"
 	"strings"
 	"sync"
 
@@ -143,9 +144,9 @@ func (g *GUI) onUpdateMainScheme() {
 		// 创建进度回调函数
 		progressCallback := func(downloaded, total int64, percentage float64, speed float64) {
 			g.updateProgressSafe(percentage / 100.0)
-			speedStr := formatBytes(int64(speed))
+			speedStr := downloader.FormatBytes(int64(speed))
 			g.appendLogSafe(fmt.Sprintf("下载进度: %.1f%% (%s/%s) 速度: %s/s",
-				percentage, formatBytes(downloaded), formatBytes(total), speedStr))
+				percentage, downloader.FormatBytes(downloaded), downloader.FormatBytes(total), speedStr))
 		}
 
 		updateMainSchemeConfigWithProgressCallback(g.window, progressCallback, func(err error) {
@@ -168,9 +169,9 @@ func (g *GUI) onUpdateModel() {
 		// 创建进度回调函数
 		progressCallback := func(downloaded, total int64, percentage float64, speed float64) {
 			g.updateProgressSafe(percentage / 100.0)
-			speedStr := formatBytes(int64(speed))
+			speedStr := downloader.FormatBytes(int64(speed))
 			g.appendLogSafe(fmt.Sprintf("下载进度: %.1f%% (%s/%s) 速度: %s/s",
-				percentage, formatBytes(downloaded), formatBytes(total), speedStr))
+				percentage, downloader.FormatBytes(downloaded), downloader.FormatBytes(total), speedStr))
 		}
 
 		updateModelConfigWithProgressCallback(g.window, progressCallback, func(err error) {
@@ -193,9 +194,9 @@ func (g *GUI) onUpdateDict() {
 		// 创建进度回调函数
 		progressCallback := func(downloaded, total int64, percentage float64, speed float64) {
 			g.updateProgressSafe(percentage / 100.0)
-			speedStr := formatBytes(int64(speed))
+			speedStr := downloader.FormatBytes(int64(speed))
 			g.appendLogSafe(fmt.Sprintf("下载进度: %.1f%% (%s/%s) 速度: %s/s",
-				percentage, formatBytes(downloaded), formatBytes(total), speedStr))
+				percentage, downloader.FormatBytes(downloaded), downloader.FormatBytes(total), speedStr))
 		}
 
 		updateDictConfigWithProgressCallback(g.window, progressCallback, func(err error) {
@@ -245,9 +246,9 @@ func (g *GUI) onCustomUpdate() {
 				// 创建进度回调函数
 				progressCallback := func(downloaded, total int64, percentage float64, speed float64) {
 					g.updateProgressSafe(percentage / 100.0)
-					speedStr := formatBytes(int64(speed))
+					speedStr := downloader.FormatBytes(int64(speed))
 					g.appendLogSafe(fmt.Sprintf("下载进度: %.1f%% (%s/%s) 速度: %s/s",
-						percentage, formatBytes(downloaded), formatBytes(total), speedStr))
+						percentage, downloader.FormatBytes(downloaded), downloader.FormatBytes(total), speedStr))
 				}
 
 				customUpdateConfigWithProgressCallback(g.window, customUrl, progressCallback, func(err error) {

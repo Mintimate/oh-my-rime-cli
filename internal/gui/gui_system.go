@@ -1,7 +1,8 @@
-package main
+package gui
 
 import (
 	"fmt"
+	"oh-my-rime-cli/internal/system"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,10 +15,10 @@ import (
 
 // GUI 版本的目标目录获取函数
 func getTargetDirGUI(window fyne.Window, callback func(string, error)) {
-	switch detectOS() {
+	switch system.DetectOS() {
 	case "Windows_NT":
 		// Windows 系统直接返回目录，无需用户选择
-		targetDir := getWindowsTargetDir()
+		targetDir := system.GetWindowsTargetDir()
 		callback(targetDir, nil)
 	case "Linux":
 		// Linux 系统需要用户选择

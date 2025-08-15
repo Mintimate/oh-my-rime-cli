@@ -1,11 +1,23 @@
-package main
+package gui
 
 import (
 	"fmt"
+	"oh-my-rime-cli/internal/downloader"
+	"oh-my-rime-cli/internal/system"
+	"oh-my-rime-cli/internal/updater"
 	"strings"
 
 	"fyne.io/fyne/v2"
 )
+
+// 常量定义 - 从根目录的 constants.go 复制
+const (
+	OhMyRimeRepo = "https://cnb.cool/Mintimate/rime/oh-my-rime/-/releases/download/latest/oh-my-rime.zip"
+	WanXiangGRA  = "https://cnb.cool/Mintimate/rime/oh-my-rime/-/releases/download/latest/wanxiang-lts-zh-hans.gram"
+)
+
+// 类型别名
+type ProgressCallback = downloader.ProgressCallback
 
 // GUI 包装函数，将原有的交互式功能包装成可以被 GUI 调用的函数
 // 这些函数现在支持异步的目录选择和进度回调
@@ -16,11 +28,11 @@ func updateMainSchemeConfigWithCallback(window fyne.Window, callback func(error)
 }
 
 // 带进度回调的更新薄荷方案函数
-func updateMainSchemeConfigWithProgressCallback(window fyne.Window, progressCallback ProgressCallback, callback func(error)) {
+func updateMainSchemeConfigWithProgressCallback(window fyne.Window, progressCallback downloader.ProgressCallback, callback func(error)) {
 	fmt.Println("开始更新薄荷方案...")
 
 	// 下载主方案
-	rimeZip := downloadWithCallback(OhMyRimeRepo, progressCallback)
+	rimeZip := downloader.DownloadWithCallback(OhMyRimeRepo, progressCallback)
 	if rimeZip == nil {
 		callback(fmt.Errorf("下载薄荷方案失败，请检查网络连接"))
 		return
@@ -33,7 +45,7 @@ func updateMainSchemeConfigWithProgressCallback(window fyne.Window, progressCall
 			return
 		}
 
-		if err := updateMainScheme(rimeZip, targetDir); err != nil {
+		if err := updater.UpdateMainScheme(rimeZip, targetDir); err != nil {
 			callback(fmt.Errorf("更新薄荷方案失败: %v", err))
 			return
 		}
@@ -53,7 +65,7 @@ func updateModelConfigWithProgressCallback(window fyne.Window, progressCallback 
 	fmt.Println("开始更新万象模型...")
 
 	// 下载模型
-	rimeGram := downloadWithCallback(WanXiangGRA, progressCallback)
+	rimeGram := downloader.DownloadWithCallback(WanXiangGRA, progressCallback)
 	if rimeGram == nil {
 		callback(fmt.Errorf("下载万象模型失败，请检查网络连接"))
 		return
@@ -66,7 +78,7 @@ func updateModelConfigWithProgressCallback(window fyne.Window, progressCallback 
 			return
 		}
 
-		if err := updateModel(rimeGram, targetDir); err != nil {
+		if err := updater.UpdateModel(rimeGram, targetDir); err != nil {
 			callback(fmt.Errorf("更新万象模型失败: %v", err))
 			return
 		}
@@ -85,7 +97,7 @@ func updateDictConfigWithCallback(window fyne.Window, callback func(error)) {
 func updateDictConfigWithProgressCallback(window fyne.Window, progressCallback ProgressCallback, callback func(error)) {
 	fmt.Println("开始更新万象词库（Lite版）...")
 
-	rimeZip := downloadWithCallback(OhMyRimeRepo, progressCallback)
+	rimeZip := downloader.DownloadWithCallback(OhMyRimeRepo, progressCallback)
 	if rimeZip == nil {
 		callback(fmt.Errorf("下载词库失败，请检查网络连接"))
 		return
@@ -98,7 +110,7 @@ func updateDictConfigWithProgressCallback(window fyne.Window, progressCallback P
 			return
 		}
 
-		if err := updateDict(rimeZip, targetDir); err != nil {
+		if err := updater.UpdateDict(rimeZip, targetDir); err != nil {
 			callback(fmt.Errorf("更新万象词库失败: %v", err))
 			return
 		}
@@ -117,7 +129,7 @@ func customUpdateConfigWithCallback(window fyne.Window, customUrl string, callba
 func customUpdateConfigWithProgressCallback(window fyne.Window, customUrl string, progressCallback ProgressCallback, callback func(error)) {
 	fmt.Printf("开始自定义更新: %s\n", customUrl)
 
-	customData := downloadWithCallback(customUrl, progressCallback)
+	customData := downloader.DownloadWithCallback(customUrl, progressCallback)
 	if customData == nil {
 		callback(fmt.Errorf("下载自定义文件失败，请检查 URL 或网络连接"))
 		return
@@ -133,14 +145,14 @@ func customUpdateConfigWithProgressCallback(window fyne.Window, customUrl string
 		// 判断文件类型
 		if strings.HasSuffix(customUrl, ".zip") {
 			// 如果是 zip 文件，更新主方案
-			if err := updateMainScheme(customData, targetDir); err != nil {
+			if err := updater.UpdateMainScheme(customData, targetDir); err != nil {
 				callback(fmt.Errorf("更新自定义方案失败: %v", err))
 				return
 			}
 			fmt.Println("✅ 自定义方案更新完成")
 		} else if strings.HasSuffix(customUrl, ".gram") {
 			// 如果是 gram 文件，更新模型
-			if err := updateModel(customData, targetDir); err != nil {
+			if err := updater.UpdateModel(customData, targetDir); err != nil {
 				callback(fmt.Errorf("更新自定义模型失败: %v", err))
 				return
 			}
@@ -159,13 +171,13 @@ func updateMainSchemeConfig() error {
 	fmt.Println("开始更新薄荷方案...")
 
 	// 下载主方案
-	rimeZip := download(OhMyRimeRepo)
+	rimeZip := downloader.Download(OhMyRimeRepo)
 	if rimeZip == nil {
 		return fmt.Errorf("下载薄荷方案失败，请检查网络连接")
 	}
 
-	targetDir := getTargetDir()
-	if err := updateMainScheme(rimeZip, targetDir); err != nil {
+	targetDir := system.GetTargetDir()
+	if err := updater.UpdateMainScheme(rimeZip, targetDir); err != nil {
 		return fmt.Errorf("更新薄荷方案失败: %v", err)
 	}
 
@@ -177,13 +189,13 @@ func updateModelConfig() error {
 	fmt.Println("开始更新万象模型...")
 
 	// 下载模型
-	rimeGram := download(WanXiangGRA)
+	rimeGram := downloader.Download(WanXiangGRA)
 	if rimeGram == nil {
 		return fmt.Errorf("下载万象模型失败，请检查网络连接")
 	}
 
-	targetDir := getTargetDir()
-	if err := updateModel(rimeGram, targetDir); err != nil {
+	targetDir := system.GetTargetDir()
+	if err := updater.UpdateModel(rimeGram, targetDir); err != nil {
 		return fmt.Errorf("更新万象模型失败: %v", err)
 	}
 
@@ -194,13 +206,13 @@ func updateModelConfig() error {
 func updateDictConfig() error {
 	fmt.Println("开始更新万象词库（Lite版）...")
 
-	targetDir := getTargetDir()
-	rimeZip := download(OhMyRimeRepo)
+	targetDir := system.GetTargetDir()
+	rimeZip := downloader.Download(OhMyRimeRepo)
 	if rimeZip == nil {
 		return fmt.Errorf("下载词库失败，请检查网络连接")
 	}
 
-	if err := updateDict(rimeZip, targetDir); err != nil {
+	if err := updater.UpdateDict(rimeZip, targetDir); err != nil {
 		return fmt.Errorf("更新万象词库失败: %v", err)
 	}
 
@@ -211,23 +223,23 @@ func updateDictConfig() error {
 func customUpdateConfig(customUrl string) error {
 	fmt.Printf("开始自定义更新: %s\n", customUrl)
 
-	customData := download(customUrl)
+	customData := downloader.Download(customUrl)
 	if customData == nil {
 		return fmt.Errorf("下载自定义文件失败，请检查 URL 或网络连接")
 	}
 
-	targetDir := getTargetDir()
+	targetDir := system.GetTargetDir()
 
 	// 判断文件类型
 	if strings.HasSuffix(customUrl, ".zip") {
 		// 如果是 zip 文件，更新主方案
-		if err := updateMainScheme(customData, targetDir); err != nil {
+		if err := updater.UpdateMainScheme(customData, targetDir); err != nil {
 			return fmt.Errorf("更新自定义方案失败: %v", err)
 		}
 		fmt.Println("✅ 自定义方案更新完成")
 	} else if strings.HasSuffix(customUrl, ".gram") {
 		// 如果是 gram 文件，更新模型
-		if err := updateModel(customData, targetDir); err != nil {
+		if err := updater.UpdateModel(customData, targetDir); err != nil {
 			return fmt.Errorf("更新自定义模型失败: %v", err)
 		}
 		fmt.Println("✅ 自定义模型更新完成")

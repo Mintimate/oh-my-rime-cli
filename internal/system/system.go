@@ -1,4 +1,4 @@
-package main
+package system
 
 import (
 	"bufio"
@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// 判断当前系统，Linux? Windows? MacOS?
-func detectOS() string {
+// DetectOS 判断当前系统，Linux? Windows? MacOS?
+func DetectOS() string {
 	switch runtime.GOOS {
 	case "windows":
 		return "Windows_NT"
@@ -23,21 +23,21 @@ func detectOS() string {
 	return "Unknown"
 }
 
-// 根据系统判断目标目录
-func getTargetDir() string {
-	switch detectOS() {
+// GetTargetDir 根据系统判断目标目录
+func GetTargetDir() string {
+	switch DetectOS() {
 	case "Windows_NT":
-		return getWindowsTargetDir()
+		return GetWindowsTargetDir()
 	case "Linux":
-		return getLinuxTargetDir()
+		return GetLinuxTargetDir()
 	case "Darwin":
-		return getDarwinTargetDir()
+		return GetDarwinTargetDir()
 	}
 	return "Unknown"
 }
 
-// Windows系统目标目录获取
-func getWindowsTargetDir() string {
+// GetWindowsTargetDir Windows系统目标目录获取
+func GetWindowsTargetDir() string {
 	// 首先尝试从注册表读取Rime用户目录
 	if rimeDir, err := getRimeUserDirFromRegistry(); err == nil {
 		if rimeDir == "" {
@@ -54,8 +54,8 @@ func getWindowsTargetDir() string {
 	return filepath.Join(os.Getenv("APPDATA"), "Rime")
 }
 
-// Linux系统目标目录获取
-func getLinuxTargetDir() string {
+// GetLinuxTargetDir Linux系统目标目录获取
+func GetLinuxTargetDir() string {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("\n==============================")
 	fmt.Println(" 请选择 Rime 配置目录类型 ")
@@ -88,8 +88,8 @@ func getLinuxTargetDir() string {
 	return ""
 }
 
-// Darwin系统目标目录获取
-func getDarwinTargetDir() string {
+// GetDarwinTargetDir Darwin系统目标目录获取
+func GetDarwinTargetDir() string {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("\n==============================")
 	fmt.Println(" 请选择 Rime 配置目录类型 ")
@@ -117,10 +117,10 @@ func getDarwinTargetDir() string {
 	return ""
 }
 
-// 使用默认浏览器打开URL
-func openUrlBrowser(url string) {
+// OpenUrlBrowser 使用默认浏览器打开URL
+func OpenUrlBrowser(url string) {
 	var cmd *exec.Cmd
-	switch detectOS() {
+	switch DetectOS() {
 	case "Windows_NT":
 		cmd = exec.Command("cmd", "/c", "start", url)
 	case "Linux":

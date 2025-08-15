@@ -1,9 +1,10 @@
 //go:build windows
 
-package main
+package system
 
 import (
 	"fmt"
+
 	"golang.org/x/sys/windows/registry"
 )
 

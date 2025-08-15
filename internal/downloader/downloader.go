@@ -1,4 +1,4 @@
-package main
+package downloader
 
 import (
 	"fmt"
@@ -38,7 +38,7 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 
 func (pr *ProgressReader) updateProgress() {
 	if pr.Total <= 0 {
-		fmt.Printf("\r下载中... %s", formatBytes(pr.Downloaded))
+		fmt.Printf("\r下载中... %s", FormatBytes(pr.Downloaded))
 		if pr.Callback != nil {
 			pr.Callback(pr.Downloaded, pr.Total, 0, 0)
 		}
@@ -71,19 +71,19 @@ func (pr *ProgressReader) updateProgress() {
 	fmt.Printf("\r[%s] %.1f%% %s/%s %s/s%s",
 		bar,
 		percentage,
-		formatBytes(pr.Downloaded),
-		formatBytes(pr.Total),
-		formatBytes(int64(speed)),
+		FormatBytes(pr.Downloaded),
+		FormatBytes(pr.Total),
+		FormatBytes(int64(speed)),
 		eta)
 }
 
-// 下载文件并返回字节数据
-func download(url string) []byte {
-	return downloadWithCallback(url, nil)
+// Download 下载文件并返回字节数据
+func Download(url string) []byte {
+	return DownloadWithCallback(url, nil)
 }
 
-// 带进度回调的下载函数
-func downloadWithCallback(url string, callback ProgressCallback) []byte {
+// DownloadWithCallback 带进度回调的下载函数
+func DownloadWithCallback(url string, callback ProgressCallback) []byte {
 	fmt.Printf("正在下载: %s\n", url)
 
 	// 创建HTTP请求
@@ -123,12 +123,12 @@ func downloadWithCallback(url string, callback ProgressCallback) []byte {
 		return nil
 	}
 
-	fmt.Printf("\n✅ 下载完成! 总大小: %s\n", formatBytes(int64(len(data))))
+	fmt.Printf("\n✅ 下载完成! 总大小: %s\n", FormatBytes(int64(len(data))))
 	return data
 }
 
-// 格式化字节大小
-func formatBytes(bytes int64) string {
+// FormatBytes 格式化字节大小
+func FormatBytes(bytes int64) string {
 	const unit = 1024
 	if bytes < unit {
 		return fmt.Sprintf("%d B", bytes)

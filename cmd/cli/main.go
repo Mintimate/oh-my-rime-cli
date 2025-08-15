@@ -7,9 +7,19 @@ import (
 	"strings"
 
 	"oh-my-rime-cli/internal/downloader"
-	"oh-my-rime-cli/internal/gui"
 	"oh-my-rime-cli/internal/system"
 	"oh-my-rime-cli/internal/updater"
+)
+
+const (
+	AppName           = "Oh My Rime CLI"
+	AppVersion        = "1.1.1"
+	APPAuthor         = "Mintimate"
+	APPOpenSource     = "https://cnb.cool/Mintimate/rime/oh-my-rime-cli"
+	APPAuthorBilibili = "https://space.bilibili.com/355567627"
+	AppURL            = "https://www.mintimate.cn/2024/03/25/rimeQuickInit"
+	OhMyRimeRepo      = "https://github.com/Mintimate/oh-my-rime/archive/refs/heads/main.zip"
+	WanXiangGRA       = "https://github.com/Mintimate/oh-my-rime/releases/download/latest/WanXiang.gram"
 )
 
 // 自定义更新函数
@@ -146,7 +156,7 @@ func handleUpdateDict() bool {
 	return true
 }
 
-func runInteractiveMenu() {
+func main() {
 	fmt.Println("欢迎使用: ", AppName)
 	fmt.Println("工具版本: ", AppVersion)
 
@@ -169,16 +179,5 @@ func runInteractiveMenu() {
 		if !handleUserChoice(input) {
 			break
 		}
-	}
-}
-
-func main() {
-	// 检查是否有命令行参数
-	if len(os.Args) > 1 {
-		// 有参数时，启动CLI模式
-		runInteractiveMenu()
-	} else {
-		// 无参数时（双击启动），启动GUI模式
-		gui.StartGUIApp()
 	}
 }
