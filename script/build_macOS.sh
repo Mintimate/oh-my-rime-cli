@@ -37,9 +37,9 @@ mv oh-my-rime-gui "$APP_NAME/Contents/MacOS/oh-my-rime-gui"
 # 创建简单的图标（使用系统默认图标）
 # 如果有icon.icns就使用，否则跳过
 if [ -f "script/build/macOS/icon.icns" ]; then
-    cp "script/build/macOS/icon.icns" "$APP_NAME/Contents/Resources/"
+    cp "script/build/macOS/icon.icns" "$APP_NAME/Contents/Resources/icon.icns"
     ICON_KEY="    <key>CFBundleIconFile</key>
-    <string>icon</string>"
+    <string>icon.icns</string>"
 else
     ICON_KEY=""
 fi
@@ -79,6 +79,23 @@ $ICON_KEY
 EOF
 
 echo "✅ 应用包创建完成"
+
+# 签名应用包
+echo "🔐 签名应用包..."
+codesign --force --deep --sign - "$APP_NAME"
+
+if [ $? -eq 0 ]; then
+    echo "✅ 应用签名成功"
+    
+    # 验证签名
+    codesign --verify --verbose "$APP_NAME"
+    
+    # 移除扩展属性（隔离标记）
+    xattr -cr "$APP_NAME"
+    echo "✅ 已移除隔离标记"
+else
+    echo "⚠️  应用签名失败，但继续构建..."
+fi
 
 # 创建简单的DMG
 echo "💿 创建DMG安装包..."
@@ -122,6 +139,16 @@ hdiutil create -srcfolder "$TEMP_DIR" -volname "Oh My Rime" -format UDZO \
 if [ $? -eq 0 ]; then
     echo "✅ DMG创建成功: $DMG_NAME"
     
+    # 签名 DMG
+    echo "🔐 签名DMG..."
+    codesign --force --sign - "$DMG_NAME"
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ DMG签名成功"
+    else
+        echo "⚠️  DMG签名失败，但文件仍可使用"
+    fi
+    
     # 清理临时文件
     rm -rf "$TEMP_DIR"
     
@@ -136,6 +163,10 @@ if [ $? -eq 0 ]; then
     echo "  2. 将应用拖拽到Applications文件夹"
     echo "  3. 双击应用启动GUI模式（无控制台窗口）"
     echo "  4. 或使用 ./oh-my-rime-test 启动CLI模式"
+    echo ""
+    echo "📝 注意事项："
+    echo "  • 应用已使用 ad-hoc 签名，应该不会显示'已损坏'错误"
+    echo "  • 如果仍有问题，请在终端运行: xattr -cr '$APP_NAME'"
 else
     echo "❌ 创建DMG失败"
     rm -rf "$TEMP_DIR"
