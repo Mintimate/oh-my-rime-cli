@@ -21,9 +21,12 @@ echo ""
 echo "=== 🖥️  构建 Windows 版本 ==="
 bash script/build_windows.sh
 
-echo ""
-echo "=== 🍎 构建 macOS 版本 ==="
-bash script/build_macOS.sh
+# 查看是否为 macOS 系统
+if [ -f /usr/bin/sw_vers ]; then
+    echo ""
+    echo "=== 🍎 构建 macOS 版本 ==="
+    bash script/build_macOS.sh
+fi
 
 # 获取版本信息用于文件名
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
