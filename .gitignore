@@ -25,3 +25,8 @@ go.work.sum
 # env file
 .env
 
+# ide
+.idea/
+
+# package cache
+dist

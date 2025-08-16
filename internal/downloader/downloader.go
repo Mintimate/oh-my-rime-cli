@@ -1,4 +1,4 @@
-package main
+package downloader
 
 import (
 	"fmt"
@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+// ProgressCallback 进度回调函数类型
+type ProgressCallback func(downloaded, total int64, percentage float64, speed float64)
+
 // 进度条读取器
 type ProgressReader struct {
 	io.Reader
@@ -16,6 +19,7 @@ type ProgressReader struct {
 	Downloaded int64
 	StartTime  time.Time
 	LastUpdate time.Time
+	Callback   ProgressCallback
 }
 
 func (pr *ProgressReader) Read(p []byte) (int, error) {
@@ -26,15 +30,18 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 	now := time.Now()
 	if now.Sub(pr.LastUpdate) > 100*time.Millisecond || err == io.EOF {
 		pr.LastUpdate = now
-		pr.printProgress()
+		pr.updateProgress()
 	}
 
 	return n, err
 }
 
-func (pr *ProgressReader) printProgress() {
+func (pr *ProgressReader) updateProgress() {
 	if pr.Total <= 0 {
-		fmt.Printf("\r下载中... %s", formatBytes(pr.Downloaded))
+		fmt.Printf("\r下载中... %s", FormatBytes(pr.Downloaded))
+		if pr.Callback != nil {
+			pr.Callback(pr.Downloaded, pr.Total, 0, 0)
+		}
 		return
 	}
 
@@ -43,6 +50,11 @@ func (pr *ProgressReader) printProgress() {
 
 	// 计算下载速度
 	speed := float64(pr.Downloaded) / elapsed.Seconds()
+
+	// 调用回调函数
+	if pr.Callback != nil {
+		pr.Callback(pr.Downloaded, pr.Total, percentage, speed)
+	}
 
 	// 计算剩余时间
 	var eta string
@@ -59,14 +71,19 @@ func (pr *ProgressReader) printProgress() {
 	fmt.Printf("\r[%s] %.1f%% %s/%s %s/s%s",
 		bar,
 		percentage,
-		formatBytes(pr.Downloaded),
-		formatBytes(pr.Total),
-		formatBytes(int64(speed)),
+		FormatBytes(pr.Downloaded),
+		FormatBytes(pr.Total),
+		FormatBytes(int64(speed)),
 		eta)
 }
 
-// 下载文件并返回字节数据
-func download(url string) []byte {
+// Download 下载文件并返回字节数据
+func Download(url string) []byte {
+	return DownloadWithCallback(url, nil)
+}
+
+// DownloadWithCallback 带进度回调的下载函数
+func DownloadWithCallback(url string, callback ProgressCallback) []byte {
 	fmt.Printf("正在下载: %s\n", url)
 
 	// 创建HTTP请求
@@ -96,6 +113,7 @@ func download(url string) []byte {
 		Total:      totalSize,
 		StartTime:  time.Now(),
 		LastUpdate: time.Now(),
+		Callback:   callback,
 	}
 
 	// 读取响应内容到内存
@@ -105,12 +123,12 @@ func download(url string) []byte {
 		return nil
 	}
 
-	fmt.Printf("\n✅ 下载完成! 总大小: %s\n", formatBytes(int64(len(data))))
+	fmt.Printf("\n✅ 下载完成! 总大小: %s\n", FormatBytes(int64(len(data))))
 	return data
 }
 
-// 格式化字节大小
-func formatBytes(bytes int64) string {
+// FormatBytes 格式化字节大小
+func FormatBytes(bytes int64) string {
 	const unit = 1024
 	if bytes < unit {
 		return fmt.Sprintf("%d B", bytes)

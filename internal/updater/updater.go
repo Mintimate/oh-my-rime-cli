@@ -1,4 +1,4 @@
-package main
+package updater
 
 import (
 	"archive/zip"
@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// 更新主方案
-func updateMainScheme(rimeZip []byte, targetDir string) error {
+// UpdateMainScheme 更新主方案
+func UpdateMainScheme(rimeZip []byte, targetDir string) error {
 	fmt.Println("正在更新主方案...")
 
 	// 检查zip数据是否有效
@@ -61,8 +61,8 @@ func updateMainScheme(rimeZip []byte, targetDir string) error {
 	return nil
 }
 
-// 更新模型文件
-func updateModel(rimeGram []byte, targetDir string) error {
+// UpdateModel 更新模型文件
+func UpdateModel(rimeGram []byte, targetDir string) error {
 	fmt.Println("正在更新模型...")
 
 	// 检查模型数据是否有效
@@ -80,8 +80,8 @@ func updateModel(rimeGram []byte, targetDir string) error {
 	return nil
 }
 
-// 更新词库
-func updateDict(rimeZip []byte, targetDir string) error {
+// UpdateDict 更新词库
+func UpdateDict(rimeZip []byte, targetDir string) error {
 	fmt.Println("正在更新词库...")
 
 	// 检查zip数据是否有效

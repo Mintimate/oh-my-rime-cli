@@ -8,7 +8,6 @@ import (
 
 	"oh-my-rime-cli/internal/constants"
 	"oh-my-rime-cli/internal/downloader"
-	"oh-my-rime-cli/internal/gui"
 	"oh-my-rime-cli/internal/system"
 	"oh-my-rime-cli/internal/updater"
 )
@@ -147,7 +146,7 @@ func handleUpdateDict() bool {
 	return true
 }
 
-func runInteractiveMenu() {
+func main() {
 	fmt.Println("欢迎使用: ", constants.AppName)
 	fmt.Println("工具版本: ", constants.AppVersion)
 
@@ -170,16 +169,5 @@ func runInteractiveMenu() {
 		if !handleUserChoice(input) {
 			break
 		}
-	}
-}
-
-func main() {
-	// 检查是否有命令行参数
-	if len(os.Args) > 1 {
-		// 有参数时，启动CLI模式
-		runInteractiveMenu()
-	} else {
-		// 无参数时（双击启动），启动GUI模式
-		gui.StartGUIApp()
 	}
 }
