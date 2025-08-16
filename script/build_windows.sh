@@ -5,7 +5,15 @@
 
 set -e
 
-echo "🚀 开始构建 Windows 版本..."
+# 获取版本信息
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+APP_VERSION=$(bash "$SCRIPT_DIR/get_version.sh" version)
+APP_NAME=$(bash "$SCRIPT_DIR/get_version.sh" name)
+APP_AUTHOR=$(bash "$SCRIPT_DIR/get_version.sh" author)
+APP_OPENSOURCE=$(bash "$SCRIPT_DIR/get_version.sh" opensource)
+
+echo "🚀 开始构建 Windows 版本 v$APP_VERSION..."
 
 # 检查 Go 环境
 if ! command -v go &> /dev/null; then
@@ -33,6 +41,9 @@ if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
     
     # 编译资源文件
     if command -v x86_64-w64-mingw32-windres &> /dev/null; then
+        echo "🔧 生成动态资源文件..."
+        bash script/generate_windows_rc.sh
+        
         echo "🔧 编译资源文件..."
         x86_64-w64-mingw32-windres -i script/build/windows/resources/app.rc -o dist/windows/app.syso -O coff
         
@@ -82,8 +93,8 @@ cp README.md dist/windows/ 2>/dev/null || true
 cp LICENSE dist/windows/ 2>/dev/null || true
 
 # 创建使用说明
-cat > dist/windows/使用说明.txt << 'EOF'
-Oh My Rime - Windows 版本
+cat > dist/windows/使用说明.txt << EOF
+$APP_NAME - Windows 版本 v$APP_VERSION
 
 文件说明：
 - oh-my-rime-cli.exe: 命令行版本
@@ -101,7 +112,8 @@ Oh My Rime - Windows 版本
 - 程序需要网络权限来下载更新
 - 支持薄荷输入法和万象模型更新
 
-项目地址：https://github.com/Mintimate/oh-my-rime-cli
+项目地址：$APP_OPENSOURCE
+作者：$APP_AUTHOR
 EOF
 
 echo ""

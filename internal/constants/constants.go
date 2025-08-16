@@ -3,7 +3,7 @@ package constants
 // 应用程序配置常量
 const (
 	AppName           = "Oh My Rime CLI"
-	AppVersion        = "1.1.1"
+	AppVersion        = "2.0.0"
 	APPAuthor         = "Mintimate"
 	APPAuthorBilibili = "https://space.bilibili.com/355567627"
 	APPOpenSource     = "https://cnb.cool/Mintimate/rime/oh-my-rime-cli"
