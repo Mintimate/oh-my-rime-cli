@@ -2,6 +2,7 @@ package gui
 
 import (
 	"fmt"
+	"oh-my-rime-cli/internal/constants"
 	"oh-my-rime-cli/internal/system"
 	"os"
 	"path/filepath"
@@ -12,6 +13,18 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 )
+
+// 打开作者 Bilibili 页面
+func OpenAuthorBilibili() {
+	fmt.Println("打开作者 Bilibili ...")
+	system.OpenUrlBrowser(constants.APPAuthorBilibili)
+}
+
+// 打开薄荷输入法文档
+func OpenMintimateDoc() {
+	fmt.Println("打开薄荷输入法文档 ...")
+	system.OpenUrlBrowser(constants.AppURL)
+}
 
 // GUI 版本的目标目录获取函数
 func getTargetDirGUI(window fyne.Window, callback func(string, error)) {

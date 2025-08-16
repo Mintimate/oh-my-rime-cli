@@ -5,13 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"oh-my-rime-cli/internal/constants"
 	"oh-my-rime-cli/internal/system"
-)
-
-// 常量定义 - 从根目录的 constants.go 复制
-const (
-	AppName    = "Rime oh-my-rime 配置更新工具"
-	AppVersion = "1.1.1"
 )
 
 // StartApp 启动应用程序（CLI模式）
@@ -19,8 +14,8 @@ func StartApp() {
 	var guiMode = flag.Bool("gui", false, "启动图形界面模式")
 	flag.Parse()
 
-	fmt.Println("欢迎使用: ", AppName)
-	fmt.Println("工具版本: ", AppVersion)
+	fmt.Println("欢迎使用: ", constants.AppName)
+	fmt.Println("工具版本: ", constants.AppVersion)
 
 	// 检测操作系统
 	currentOS := system.DetectOS()
