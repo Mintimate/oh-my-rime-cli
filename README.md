@@ -2,15 +2,17 @@
 
 Rime 的 [Oh-my-rime](https://github.com/Mintimate/oh-my-rime) 配置自动更新与管理命令行工具，支持 Windows、Linux、macOS 多平台。
 
+![使用 Demo](./assets/img/usingApp.webp)
+
 ## 功能简介
 - 一键下载和更新 Rime 主方案、模型、词库
 - 自动检测操作系统，智能选择配置目录
 - Windows 下支持注册表自动查找 Rime 用户目录
-- 交互式美观菜单(就是命令行~)，支持多种输入法环境选择
+- 交互式美观菜单(支持命令行版本和 GUI界面)，支持多种输入法环境选择
 
 ```mermaid
 flowchart TD
-    A[🌟 启动程序 <br/> macOS/Linux使用终端<br/>Windows双击即可] --> B[🖥️ 检测操作系统]
+    A[🌟 启动程序 <br/> CLI 版本使用终端<br/>GUI 进行安装双击即可] --> B[🖥️ 检测操作系统]
     B --支持的操作系统--> C[📋 显示主菜单]
     B --不支持/检测失败--> I
     
@@ -63,6 +65,36 @@ flowchart TD
 - Go 1.24 及以上
 - Windows 平台需支持 `golang.org/x/sys/windows/registry` 包
 
+## 下载与安装
+
+### 预编译版本下载
+
+您可以在 [Releases](https://github.com/Mintimate/oh-my-rime-cli/releases) 页面下载预编译版本：
+
+- **GUI 版本**：
+  - macOS：下载 `.dmg` 文件
+  - Windows：下载 `.exe` 安装包
+
+- **CLI 版本**：
+  - Windows：下载 `oh-my-rime-cli-windows.exe`
+  - Linux：下载 `oh-my-rime-cli-linux`
+  - macOS：下载 `/oh-my-rime-cli-darwin`
+
+### 安全提示
+
+⚠️ **重要提醒**：由于项目未进行代码签名，Windows Defender 和其他杀毒软件可能会误报为病毒，比如 macOS 打开 DMG 报错：
+
+![macOS 上打开 DMG 报错](./assets/img/openDmgWarning.webp)
+
+需要在**安全性**内允许打开，之后打开 App 可能还需要一次：
+
+![macOS 上打开 App 报错](./assets/img/openAppWarning.webp)
+
+这是 Go 编译程序的常见问题，请：
+- 确保从官方 GitHub Releases 页面下载
+- 在杀毒软件中添加信任/白名单
+- 或选择自行编译源码
+
 ## 使用方法
 
 ### 1. 编译
@@ -92,18 +124,11 @@ GOOS=windows GOARCH=amd64 go build -o oh-my-rime-cli.exe .
 
 双击或命令行运行编译后的程序，根据提示选择操作和配置目录。
 
-##部分逻辑
+## 部分逻辑
 
-Windows 注册表支持
-- Windows 下会自动读取注册表 `HKEY_CURRENT_USER\Software\Rime\Weasel` 的 `RimeUserDir` 字段。
-- 若注册表不存在或读取失败，自动回退到 `%APPDATA%\Rime` 目录。
-
-
-## Windows 报毒问题
-
-由于 Windows Defender 和其他杀毒软件可能会误报 Go 编译的可执行文件为病毒，请确保从本官方渠道下载或自行编译，并在必要时添加信任。
-
-> 我并没有购买代码签名证书，因此无法提供签名的可执行文 \(o′ω`o)ノ
+### Windows 注册表支持
+- Windows 下会自动读取注册表 `HKEY_CURRENT_USER\Software\Rime\Weasel` 的 `RimeUserDir` 字段
+- 若注册表不存在或读取失败，自动回退到 `%APPDATA%\Rime` 目录
 
 
 ## 贡献与许可

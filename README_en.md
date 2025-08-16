@@ -2,21 +2,23 @@
 
 A command-line tool for automatic update and management of Rime [Oh-my-rime](https://github.com/Mintimate/oh-my-rime) configuration, supporting Windows, Linux, and macOS.
 
+![Usage Demo](./assets/img/usingApp.webp)
+
 ## Features
 - One-click download and update of Rime main scheme, model, and dictionaries
 - Auto-detect operating system and select configuration directory intelligently
 - Windows: automatically locate Rime user directory via registry
-- Interactive and user-friendly menu (CLI), supports multiple input method environments
+- Interactive and user-friendly menu (supports both CLI version and GUI interface), supports multiple input method environments
 
 ```mermaid
 flowchart TD
-    A[🌟 Launch Program <br/> macOS/Linux: Use Terminal<br/>Windows: Double-click] --> B[🖥️ Detect OS]
+    A[🌟 Launch Program <br/> CLI version uses terminal<br/>GUI version double-click to install] --> B[🖥️ Detect OS]
     B --Supported OS--> C[📋 Show Main Menu]
     B --Unsupported/Detection Failed--> I
     
     C --> D{"✨ User Choice"}
     D -->|① Update Scheme| E[💼 Download Oh-my-rime Package]
-    D -->|② Update Model| F[🧠 Download Vision Model]
+    D -->|② Update Model| F[🧠 Download Wanxiang Model]
     D -->|③ Update Dictionary| G[📚 Download Oh-my-rime Package<br/>Extract Dictionary]
     D -->|④ Custom| H[🔗 Paste Config Link]
     D -->|⏹️ Exit| I[👋 Terminate Program]
@@ -63,6 +65,36 @@ flowchart TD
 - Go 1.24 or above
 - On Windows, requires `golang.org/x/sys/windows/registry` package
 
+## Download & Installation
+
+### Pre-compiled Version Download
+
+You can download pre-compiled versions from the [Releases](https://github.com/Mintimate/oh-my-rime-cli/releases) page:
+
+- **GUI Version**:
+  - macOS: Download `.dmg` file
+  - Windows: Download `.exe` installer
+
+- **CLI Version**:
+  - Windows: Download `oh-my-rime-cli-windows.exe`
+  - Linux: Download `oh-my-rime-cli-linux`
+  - macOS: Download `oh-my-rime-cli-darwin`
+
+### Security Notice
+
+⚠️ **Important Reminder**: Since the project is not code-signed, Windows Defender and other antivirus software may falsely report it as a virus. For example, macOS may show an error when opening the DMG:
+
+![macOS DMG Opening Error](./assets/img/openDmgWarning.webp)
+
+You need to allow it in **Security & Privacy** settings, and then opening the App may require another permission:
+
+![macOS App Opening Error](./assets/img/openAppWarning.webp)
+
+This is a common issue with Go-compiled programs. Please:
+- Ensure you download from the official GitHub Releases page
+- Add to trust/whitelist in your antivirus software
+- Or choose to compile the source code yourself
+
 ## Usage
 
 ### 1. Build
@@ -92,19 +124,14 @@ GOOS=windows GOARCH=amd64 go build -o oh-my-rime-cli.exe .
 
 Double-click or run the compiled program in the command line, and follow the prompts to select actions and configuration directory.
 
-## Logic Details
+## Partial Logic
 
-Windows Registry Support
-- On Windows, automatically reads the `RimeUserDir` value from `HKEY_CURRENT_USER\Software\Rime\Weasel`.
-- If the registry key does not exist or fails to read, falls back to `%APPDATA%\Rime` directory.
+### Windows Registry Support
+- On Windows, automatically reads the `RimeUserDir` value from `HKEY_CURRENT_USER\Software\Rime\Weasel` registry
+- If the registry key does not exist or fails to read, automatically falls back to `%APPDATA%\Rime` directory
 
-## Windows Antivirus Issues
 
-Windows Defender and other antivirus software may falsely report Go-compiled executables as viruses. Please ensure you download from the official channel or compile by yourself, and add trust if necessary.
-
-> No code signing certificate is provided, so the executable is unsigned. (o′ω`o)ノ
-
-## License
+## Contribution & License
 - MIT License
 - Issues and PRs are welcome
 
