@@ -70,7 +70,7 @@ func GetLinuxTargetDir() string {
 
 	switch choice {
 	case "1", "":
-		targetDir := filepath.Join(os.Getenv("HOME"), ".config", "rime")
+		targetDir := filepath.Join(os.Getenv("HOME"), ".config", "ibus", "rime")
 		fmt.Println("目标地址: ", targetDir)
 		return targetDir
 	case "2":
