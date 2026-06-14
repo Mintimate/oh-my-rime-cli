@@ -1,7 +1,14 @@
 #!/bin/bash
 
-# 简化版macOS GUI构建脚本
-echo "🚀 构建macOS GUI版本（简化版）..."
+# 获取版本信息
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+APP_VERSION=$(bash "$SCRIPT_DIR/get_version.sh" version)
+APP_NAME_CONST=$(bash "$SCRIPT_DIR/get_version.sh" name)
+APP_AUTHOR=$(bash "$SCRIPT_DIR/get_version.sh" author)
+APP_OPENSOURCE=$(bash "$SCRIPT_DIR/get_version.sh" opensource)
+
+echo "🚀 构建macOS GUI版本 v$APP_VERSION..."
 
 # 构建Go应用
 echo "🔨 编译Go应用..."
@@ -29,8 +36,8 @@ mv oh-my-rime-gui "$APP_NAME/Contents/MacOS/oh-my-rime-gui"
 
 # 创建简单的图标（使用系统默认图标）
 # 如果有icon.icns就使用，否则跳过
-if [ -f "icon.icns" ]; then
-    cp icon.icns "$APP_NAME/Contents/Resources/"
+if [ -f "script/build/macOS/icon.icns" ]; then
+    cp "script/build/macOS/icon.icns" "$APP_NAME/Contents/Resources/"
     ICON_KEY="    <key>CFBundleIconFile</key>
     <string>icon</string>"
 else
@@ -50,11 +57,11 @@ cat > "$APP_NAME/Contents/Info.plist" << EOF
     <key>CFBundleName</key>
     <string>Oh My Rime</string>
     <key>CFBundleDisplayName</key>
-    <string>Oh My Rime</string>
+    <string>$APP_NAME_CONST</string>
     <key>CFBundleVersion</key>
-    <string>1.1.1</string>
+    <string>$APP_VERSION</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.1.1</string>
+    <string>$APP_VERSION</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
 $ICON_KEY
@@ -76,7 +83,7 @@ echo "✅ 应用包创建完成"
 # 创建简单的DMG
 echo "💿 创建DMG安装包..."
 
-DMG_NAME="Oh-My-Rime-v1.1.1.dmg"
+DMG_NAME="Oh-My-Rime-v$APP_VERSION.dmg"
 
 # 清理旧文件
 rm -f "$DMG_NAME"
@@ -94,7 +101,7 @@ ln -s /Applications "$TEMP_DIR/Applications"
 
 # 创建安装说明
 cat > "$TEMP_DIR/安装说明.txt" << EOF
-Oh My Rime - Rime输入法配置管理工具
+$APP_NAME_CONST - Rime输入法配置管理工具
 
 安装方法：
 将 "Oh My Rime.app" 拖拽到 "Applications" 文件夹
@@ -103,9 +110,9 @@ Oh My Rime - Rime输入法配置管理工具
 • 双击应用图标 -> GUI模式（无控制台窗口）
 • 终端运行可执行文件 -> CLI模式
 
-项目地址：https://cnb.cool/Mintimate/rime/oh-my-rime-cli
-作者：Mintimate
-版本：v1.1.1
+项目地址：$APP_OPENSOURCE
+作者：$APP_AUTHOR
+版本：v$APP_VERSION
 EOF
 
 # 创建DMG（简化版，无复杂布局）

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"oh-my-rime-cli/internal/constants"
 	"oh-my-rime-cli/internal/downloader"
 	"oh-my-rime-cli/internal/gui"
 	"oh-my-rime-cli/internal/system"
@@ -52,8 +53,8 @@ func customUpdate() {
 // 显示主菜单
 func showMenu() {
 	fmt.Println("\n", strings.Repeat("=", 60))
-	fmt.Println(" 作者: ", APPAuthor)
-	fmt.Println(" 开源地址: ", APPOpenSource)
+	fmt.Println(" 作者: ", constants.APPAuthor)
+	fmt.Println(" 开源地址: ", constants.APPOpenSource)
 	fmt.Println("\n", strings.Repeat("=", 60))
 	fmt.Println("工作原理：")
 	fmt.Println("  • 下载最新的方案或模型文件")
@@ -86,11 +87,11 @@ func handleUserChoice(choice string) bool {
 		return true
 	case "b":
 		fmt.Println("打开作者 Bilibili ...")
-		system.OpenUrlBrowser(APPAuthorBilibili)
+		system.OpenUrlBrowser(constants.APPAuthorBilibili)
 		return true
 	case "d":
 		fmt.Println("打开薄荷输入法文档 ...")
-		system.OpenUrlBrowser(AppURL)
+		system.OpenUrlBrowser(constants.AppURL)
 		return true
 	case "q":
 		fmt.Println("感谢使用！记得更新后，重新部署方案以使更改生效")
@@ -103,7 +104,7 @@ func handleUserChoice(choice string) bool {
 
 // 处理更新主方案
 func handleUpdateMainScheme() bool {
-	rimeZip := downloader.Download(OhMyRimeRepo)
+	rimeZip := downloader.Download(constants.OhMyRimeRepo)
 	if rimeZip == nil {
 		fmt.Println("下载主方案失败，请检查网络连接或稍后重试")
 		return true
@@ -118,7 +119,7 @@ func handleUpdateMainScheme() bool {
 
 // 处理更新模型
 func handleUpdateModel() bool {
-	rimeGram := downloader.Download(WanXiangGRA)
+	rimeGram := downloader.Download(constants.WanXiangGRA)
 	if rimeGram == nil {
 		fmt.Println("下载模型失败，请检查网络连接或稍后重试")
 		return true
@@ -134,7 +135,7 @@ func handleUpdateModel() bool {
 // 处理更新词库
 func handleUpdateDict() bool {
 	targetDir := system.GetTargetDir()
-	rimeZip := downloader.Download(OhMyRimeRepo)
+	rimeZip := downloader.Download(constants.OhMyRimeRepo)
 	if rimeZip == nil {
 		fmt.Println("下载词库失败，请检查网络连接或稍后重试")
 		return true
@@ -147,8 +148,8 @@ func handleUpdateDict() bool {
 }
 
 func runInteractiveMenu() {
-	fmt.Println("欢迎使用: ", AppName)
-	fmt.Println("工具版本: ", AppVersion)
+	fmt.Println("欢迎使用: ", constants.AppName)
+	fmt.Println("工具版本: ", constants.AppVersion)
 
 	// 检测操作系统
 	currentOS := system.DetectOS()

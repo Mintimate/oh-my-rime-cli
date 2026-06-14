@@ -14,16 +14,13 @@ $:
             latest: true
             description: ${LATEST_CHANGE_LOG}
         - name: 依赖安装和部署
-          script: zsh build.sh
+          script: zsh script/build.sh
         - name: release 上传附件
           image: cnbcool/attachments:latest
           settings:
             attachments:
-              - oh-my-rime-cli.exe
-              - oh-my-rime-cli-linux-amd64
-              - oh-my-rime-cli-linux-arm64
-              - oh-my-rime-cli-mac-amd64
-              - oh-my-rime-cli-mac-arm64
+              - dist/linux/oh-my-rime-*
+              - dist/windows/oh-my-rime-*.exe
           exports:
             FILES: FILES
         - name: 输出附件

@@ -13,6 +13,10 @@ RUN apt update && \
     webp && \
     chsh -s /bin/zsh
 
+# 安装 golang-mingw 交叉编译工具链
+RUN apt install -y \
+    gcc-mingw-w64
+
 RUN yes | zsh -c "$(wget -qO- 'https://cnb.cool/Mintimate/tool-forge/oh-my-zsh/-/git/raw/main/AutoInstallZshWithPlugin.sh')"
 
 # 安装 code-server 和 vscode 常用插件

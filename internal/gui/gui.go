@@ -99,11 +99,35 @@ func (g *GUI) setupUI() {
 	g.installBtn = widget.NewButton("📚 更新万象词库", g.onUpdateDict)
 	g.uninstallBtn = widget.NewButton("🔗 自定义更新", g.onCustomUpdate)
 
-	buttonContainer := container.NewGridWithColumns(2,
+	// 添加新的按钮 - 打开链接
+	bilibiliBtn := widget.NewButton("📺 关注作者 Bilibili", func() {
+		OpenAuthorBilibili()
+		g.appendLogSafe("已打开作者 Bilibili 页面")
+	})
+	docBtn := widget.NewButton("📖 打开薄荷文档", func() {
+		OpenMintimateDoc()
+		g.appendLogSafe("已打开薄荷输入法文档")
+	})
+
+	// 主功能按钮容器
+	mainButtonContainer := container.NewGridWithColumns(2,
 		g.downloadBtn,
 		g.updateBtn,
 		g.installBtn,
 		g.uninstallBtn,
+	)
+
+	// 链接按钮容器
+	linkButtonContainer := container.NewGridWithColumns(2,
+		bilibiliBtn,
+		docBtn,
+	)
+
+	// 组合所有按钮
+	buttonContainer := container.NewVBox(
+		mainButtonContainer,
+		widget.NewSeparator(),
+		linkButtonContainer,
 	)
 
 	// 日志区域
@@ -112,17 +136,20 @@ func (g *GUI) setupUI() {
 	g.logText.SetPlaceHolder("操作日志将在这里显示...")
 	g.logText.Wrapping = fyne.TextWrapWord
 	g.logText.Disable()
+	// 设置日志文本框的最小行数，增加显示高度
+	g.logText.Resize(fyne.NewSize(0, 300))
 
 	g.logScroll = container.NewScroll(g.logText)
 	logContainer := container.NewBorder(logLabel, nil, nil, nil, g.logScroll)
-	logContainer.Resize(fyne.NewSize(0, 250))
+	// 大幅增加日志容器的高度到 450 像素，提供更多日志显示空间
+	logContainer.Resize(fyne.NewSize(0, 450))
 
 	// 状态栏
 	statusContainer := container.NewBorder(nil, nil,
 		widget.NewLabel("状态:"), nil, g.statusLabel)
 
-	// 主布局
-	content := container.NewVBox(
+	// 顶部区域（标题、状态、按钮）
+	topContent := container.NewVBox(
 		container.NewVBox(title, subtitle),
 		widget.NewSeparator(),
 		statusContainer,
@@ -130,7 +157,15 @@ func (g *GUI) setupUI() {
 		widget.NewSeparator(),
 		buttonContainer,
 		widget.NewSeparator(),
-		logContainer,
+	)
+
+	// 主布局 - 使用 Border 布局让日志区域占据剩余空间
+	content := container.NewBorder(
+		topContent,   // 顶部
+		nil,          // 底部
+		nil,          // 左侧
+		nil,          // 右侧
+		logContainer, // 中心区域（日志）
 	)
 
 	g.window.SetContent(container.NewPadded(content))

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -35,11 +36,36 @@ func (g *GUI) appendLogSafe(message string) {
 			if currentText != "" {
 				currentText += "\n"
 			}
-			g.logText.SetText(currentText + formattedMessage)
+			newText := currentText + formattedMessage
+			g.logText.SetText(newText)
 
-			// 滚动到底部
+			// 强制刷新组件
+			g.logText.Refresh()
+
+			// 将光标移动到文本末尾
+			textLines := strings.Split(newText, "\n")
+			g.logText.CursorRow = len(textLines) - 1
+			g.logText.CursorColumn = len(textLines[len(textLines)-1])
+
+			// 确保滚动到底部 - 多次尝试以确保成功
 			if g.logScroll != nil {
 				g.logScroll.ScrollToBottom()
+
+				// 延迟再次滚动，确保UI完全更新后滚动
+				go func() {
+					time.Sleep(50 * time.Millisecond)
+					fyne.Do(func() {
+						g.logScroll.ScrollToBottom()
+					})
+				}()
+
+				// 再次延迟滚动，处理可能的渲染延迟
+				go func() {
+					time.Sleep(150 * time.Millisecond)
+					fyne.Do(func() {
+						g.logScroll.ScrollToBottom()
+					})
+				}()
 			}
 		})
 	}

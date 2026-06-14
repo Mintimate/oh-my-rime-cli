@@ -2,18 +2,13 @@ package gui
 
 import (
 	"fmt"
+	"oh-my-rime-cli/internal/constants"
 	"oh-my-rime-cli/internal/downloader"
 	"oh-my-rime-cli/internal/system"
 	"oh-my-rime-cli/internal/updater"
 	"strings"
 
 	"fyne.io/fyne/v2"
-)
-
-// 常量定义 - 从根目录的 constants.go 复制
-const (
-	OhMyRimeRepo = "https://cnb.cool/Mintimate/rime/oh-my-rime/-/releases/download/latest/oh-my-rime.zip"
-	WanXiangGRA  = "https://cnb.cool/Mintimate/rime/oh-my-rime/-/releases/download/latest/wanxiang-lts-zh-hans.gram"
 )
 
 // 类型别名
@@ -32,7 +27,7 @@ func updateMainSchemeConfigWithProgressCallback(window fyne.Window, progressCall
 	fmt.Println("开始更新薄荷方案...")
 
 	// 下载主方案
-	rimeZip := downloader.DownloadWithCallback(OhMyRimeRepo, progressCallback)
+	rimeZip := downloader.DownloadWithCallback(constants.OhMyRimeRepo, progressCallback)
 	if rimeZip == nil {
 		callback(fmt.Errorf("下载薄荷方案失败，请检查网络连接"))
 		return
@@ -65,7 +60,7 @@ func updateModelConfigWithProgressCallback(window fyne.Window, progressCallback 
 	fmt.Println("开始更新万象模型...")
 
 	// 下载模型
-	rimeGram := downloader.DownloadWithCallback(WanXiangGRA, progressCallback)
+	rimeGram := downloader.DownloadWithCallback(constants.WanXiangGRA, progressCallback)
 	if rimeGram == nil {
 		callback(fmt.Errorf("下载万象模型失败，请检查网络连接"))
 		return
@@ -97,7 +92,7 @@ func updateDictConfigWithCallback(window fyne.Window, callback func(error)) {
 func updateDictConfigWithProgressCallback(window fyne.Window, progressCallback ProgressCallback, callback func(error)) {
 	fmt.Println("开始更新万象词库（Lite版）...")
 
-	rimeZip := downloader.DownloadWithCallback(OhMyRimeRepo, progressCallback)
+	rimeZip := downloader.DownloadWithCallback(constants.OhMyRimeRepo, progressCallback)
 	if rimeZip == nil {
 		callback(fmt.Errorf("下载词库失败，请检查网络连接"))
 		return
@@ -171,7 +166,7 @@ func updateMainSchemeConfig() error {
 	fmt.Println("开始更新薄荷方案...")
 
 	// 下载主方案
-	rimeZip := downloader.Download(OhMyRimeRepo)
+	rimeZip := downloader.Download(constants.OhMyRimeRepo)
 	if rimeZip == nil {
 		return fmt.Errorf("下载薄荷方案失败，请检查网络连接")
 	}
@@ -189,7 +184,7 @@ func updateModelConfig() error {
 	fmt.Println("开始更新万象模型...")
 
 	// 下载模型
-	rimeGram := downloader.Download(WanXiangGRA)
+	rimeGram := downloader.Download(constants.WanXiangGRA)
 	if rimeGram == nil {
 		return fmt.Errorf("下载万象模型失败，请检查网络连接")
 	}
@@ -207,7 +202,7 @@ func updateDictConfig() error {
 	fmt.Println("开始更新万象词库（Lite版）...")
 
 	targetDir := system.GetTargetDir()
-	rimeZip := downloader.Download(OhMyRimeRepo)
+	rimeZip := downloader.Download(constants.OhMyRimeRepo)
 	if rimeZip == nil {
 		return fmt.Errorf("下载词库失败，请检查网络连接")
 	}
