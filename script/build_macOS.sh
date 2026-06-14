@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 获取版本信息
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
 APP_VERSION=$(bash "$SCRIPT_DIR/get_version.sh" version)
 APP_NAME_CONST=$(bash "$SCRIPT_DIR/get_version.sh" name)

@@ -1,0 +1,302 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example v2.0.1"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: "1.23.4"
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install GUI build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: Run tests
+        run: go test -vet=off ./...
+
+  build-cli:
+    name: CLI ${{ matrix.name }}
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: darwin
+            goarch: amd64
+            name: darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            name: darwin-arm64
+          - goos: linux
+            goarch: amd64
+            name: linux-amd64
+          - goos: linux
+            goarch: arm64
+            name: linux-arm64
+          - goos: windows
+            goarch: amd64
+            name: windows-amd64
+            ext: .exe
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build CLI
+        run: |
+          mkdir -p dist
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -ldflags="-s -w" \
+            -o dist/oh-my-rime-cli-${{ env.RELEASE_TAG }}-${{ matrix.name }}${{ matrix.ext }} ./cmd/cli
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+
+  build-macos-app:
+    name: macOS App ${{ matrix.arch }}
+    needs: test
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build macOS GUI
+        run: |
+          mkdir -p dist
+          CGO_ENABLED=1 GOOS=darwin GOARCH=${{ matrix.arch }} \
+            go build -ldflags="-s -w" -o dist/oh-my-rime-gui .
+
+      - name: Create app bundle
+        run: |
+          APP_NAME="Oh My Rime.app"
+          mkdir -p "$APP_NAME/Contents/MacOS" "$APP_NAME/Contents/Resources"
+          mv dist/oh-my-rime-gui "$APP_NAME/Contents/MacOS/oh-my-rime-gui"
+          chmod +x "$APP_NAME/Contents/MacOS/oh-my-rime-gui"
+          cp script/build/macOS/icon.icns "$APP_NAME/Contents/Resources/icon.icns"
+
+          cat > "$APP_NAME/Contents/Info.plist" << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>oh-my-rime-gui</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.rime.oh-my-rime</string>
+              <key>CFBundleName</key>
+              <string>Oh My Rime</string>
+              <key>CFBundleDisplayName</key>
+              <string>Oh My Rime</string>
+              <key>CFBundleVersion</key>
+              <string>${RELEASE_TAG#v}</string>
+              <key>CFBundleShortVersionString</key>
+              <string>${RELEASE_TAG#v}</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleIconFile</key>
+              <string>icon.icns</string>
+              <key>LSUIElement</key>
+              <false/>
+              <key>NSHighResolutionCapable</key>
+              <true/>
+              <key>NSAppTransportSecurity</key>
+              <dict>
+                  <key>NSAllowsArbitraryLoads</key>
+                  <true/>
+              </dict>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Sign app bundle
+        run: |
+          codesign --force --deep --sign - "Oh My Rime.app"
+          codesign --verify --verbose "Oh My Rime.app"
+          xattr -cr "Oh My Rime.app"
+
+      - name: Create DMG
+        run: |
+          DMG_NAME="Oh-My-Rime-${RELEASE_TAG}-macos-${{ matrix.arch }}.dmg"
+          TEMP_DIR="dmg-temp-${{ matrix.arch }}"
+          mkdir -p "$TEMP_DIR"
+          cp -R "Oh My Rime.app" "$TEMP_DIR/"
+          ln -s /Applications "$TEMP_DIR/Applications"
+          hdiutil create -srcfolder "$TEMP_DIR" -volname "Oh My Rime" \
+            -format UDZO -imagekey zlib-level=9 "dist/$DMG_NAME"
+          codesign --force --sign - "dist/$DMG_NAME"
+
+      - name: Upload macOS app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app-${{ matrix.arch }}
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  build-windows-app:
+    name: Windows App amd64
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install Windows build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64 zip
+
+      - name: Build Windows GUI and CLI
+        run: |
+          mkdir -p dist/windows
+
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+            go build -ldflags="-s -w" -o dist/windows/oh-my-rime-cli.exe ./cmd/cli
+
+          bash script/generate_windows_rc.sh
+          x86_64-w64-mingw32-windres \
+            -i script/build/windows/resources/app.rc \
+            -o app.syso \
+            -O coff
+
+          CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc \
+            go build -ldflags="-s -w -H windowsgui" -o dist/windows/oh-my-rime-gui.exe .
+
+          rm -f app.syso
+          cp README.md LICENSE dist/windows/
+          cp script/build/windows/resources/app.ico dist/windows/
+
+          cat > dist/windows/start-gui.bat << 'EOF'
+          @echo off
+          start "" "%~dp0oh-my-rime-gui.exe"
+          EOF
+
+          cat > dist/windows/start-cli.bat << 'EOF'
+          @echo off
+          chcp 65001 > nul
+          "%~dp0oh-my-rime-cli.exe"
+          pause
+          EOF
+
+          cd dist/windows
+          zip -r "../Oh-My-Rime-${RELEASE_TAG}-windows-amd64.zip" .
+
+      - name: Upload Windows app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-app-amd64
+          path: dist/*.zip
+          if-no-files-found: error
+
+  build-linux-app:
+    name: Linux App amd64
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install Linux GUI build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: Build Linux GUI and CLI
+        run: |
+          mkdir -p dist/linux
+          CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+            go build -ldflags="-s -w" -o dist/linux/oh-my-rime-gui .
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+            go build -ldflags="-s -w" -o dist/linux/oh-my-rime-cli ./cmd/cli
+          cp README.md LICENSE dist/linux/
+          tar -C dist -czf "dist/Oh-My-Rime-${RELEASE_TAG}-linux-amd64.tar.gz" linux
+
+      - name: Upload Linux app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-app-amd64
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    needs:
+      - build-cli
+      - build-macos-app
+      - build-windows-app
+      - build-linux-app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: List release assets
+        run: ls -lh release-assets
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Oh My Rime ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
+          files: release-assets/*
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}

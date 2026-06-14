@@ -29,8 +29,8 @@ if [ -f /usr/bin/sw_vers ]; then
 fi
 
 # 获取版本信息用于文件名
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_VERSION=$(bash "$SCRIPT_DIR/script/get_version.sh" version)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+APP_VERSION=$(bash "$SCRIPT_DIR/get_version.sh" version)
 
 # 移动 macOS 构建结果到 dist 目录
 if [ -f "Oh My Rime.app" ]; then

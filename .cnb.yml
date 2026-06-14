@@ -1,8 +1,33 @@
+.sync_pipeline: &sync_pipeline
+  imports:
+    - https://cnb.cool/Mintimate/secret/-/blob/main/SyncToGitHub.yml
+  stages:
+    - name: 自动同步代码
+      image: tencentcom/git-sync
+      settings:
+        target_url: https://github.com/Mintimate/oh-my-rime-cli.git
+        auth_type: https
+        username: ${GIT_USERNAME}
+        password: ${GIT_ACCESS_TOKEN}
+        force: true
+        push_tags: true
+
+# 2. 触发分支 push 事件（同步 main 分支的 commit）
+main:
+  push:
+    - *sync_pipeline
+
+
 $:
   tag_push:
+    - *sync_pipeline
     # 上传二进制包到 release 附件
-    - docker:
+    - name: "发布新版本"
+      docker:
         build: .ide/Dockerfile
+        volumes:
+          - /root/go/pkg/mod
+          - /root/.cache/go-build
       stages:
         - name: 更新日志
           image: cnbcool/changelog
@@ -21,23 +46,8 @@ $:
             attachments:
               - dist/linux/oh-my-rime-*
               - dist/windows/oh-my-rime-*.exe
-              - dict/macos/oh-my-rime-*
+              - dist/macos/oh-my-rime-*
           exports:
             FILES: FILES
         - name: 输出附件
           script: echo $FILES
-main:
-  push:
-    - name: "推送镜像"
-      imports:
-        - https://cnb.cool/Mintimate/secret/-/blob/main/SyncToGitHub.yml
-      stages:
-        - name: 自动同步代码
-          image: tencentcom/git-sync
-          settings:
-            target_url: https://github.com/Mintimate/oh-my-rime-cli.git
-            auth_type: https
-            username: ${GIT_USERNAME}
-            password: ${GIT_ACCESS_TOKEN}
-            branch: main
-            force: true
