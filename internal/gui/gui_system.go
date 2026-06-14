@@ -44,6 +44,40 @@ func getTargetDirGUI(window fyne.Window, callback func(string, error)) {
 	}
 }
 
+func confirmTargetDirGUI(window fyne.Window, operationName, targetDir string, callback func(bool)) {
+	content := container.NewVBox(
+		widget.NewLabelWithStyle(operationName, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		widget.NewLabel("目标配置目录:"),
+		widget.NewLabel(targetDir),
+		widget.NewSeparator(),
+		widget.NewLabel("更新前会自动备份当前配置；如果更新失败，会尝试恢复到更新前状态。"),
+		widget.NewLabel("更新完成后，请重新部署 Rime 方案以使更改生效。"),
+	)
+
+	dialog.ShowCustomConfirm("确认更新", "开始更新", "取消", content,
+		func(confirmed bool) {
+			callback(confirmed)
+		}, window)
+}
+
+func showUpdateSuccessGUI(window fyne.Window, title, targetDir string) {
+	content := container.NewVBox(
+		widget.NewLabel("更新已完成。"),
+		widget.NewLabel("请重新部署 Rime 方案以使更改生效。"),
+		widget.NewSeparator(),
+		widget.NewLabel("配置目录:"),
+		widget.NewLabel(targetDir),
+	)
+
+	dialog.ShowCustomConfirm(title, "打开目录", "知道了", content,
+		func(openDir bool) {
+			if openDir {
+				system.OpenFolder(targetDir)
+			}
+		}, window)
+}
+
 // Linux 系统目录选择 GUI
 func showLinuxDirSelectionGUI(window fyne.Window, callback func(string, error)) {
 	var selectedDir string

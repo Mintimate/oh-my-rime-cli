@@ -19,145 +19,192 @@ type ProgressCallback = downloader.ProgressCallback
 
 // updateMainSchemeConfigWithCallback 更新薄荷方案 - 对应 CLI 选项 1
 func updateMainSchemeConfigWithCallback(window fyne.Window, callback func(error)) {
-	updateMainSchemeConfigWithProgressCallback(window, nil, callback)
+	updateMainSchemeConfigWithProgressCallback(window, nil, func(_ string, err error) {
+		callback(err)
+	})
 }
 
 // 带进度回调的更新薄荷方案函数
-func updateMainSchemeConfigWithProgressCallback(window fyne.Window, progressCallback downloader.ProgressCallback, callback func(error)) {
+func updateMainSchemeConfigWithProgressCallback(window fyne.Window, progressCallback downloader.ProgressCallback, callback func(string, error)) {
 	fmt.Println("开始更新薄荷方案...")
-
-	// 下载主方案
-	rimeZip := downloader.DownloadWithCallback(constants.OhMyRimeRepo, progressCallback)
-	if rimeZip == nil {
-		callback(fmt.Errorf("下载薄荷方案失败，请检查网络连接"))
-		return
-	}
 
 	// 获取目标目录（可能需要用户选择）
 	getTargetDirGUI(window, func(targetDir string, err error) {
 		if err != nil {
-			callback(fmt.Errorf("获取目标目录失败: %v", err))
+			callback("", fmt.Errorf("获取目标目录失败: %v", err))
 			return
 		}
 
-		if err := updater.UpdateMainScheme(rimeZip, targetDir); err != nil {
-			callback(fmt.Errorf("更新薄荷方案失败: %v", err))
-			return
-		}
+		confirmTargetDirGUI(window, "更新薄荷方案", targetDir, func(confirmed bool) {
+			if !confirmed {
+				callback("", fmt.Errorf("用户取消了更新"))
+				return
+			}
 
-		fmt.Println("✅ 薄荷方案更新完成")
-		callback(nil)
+			go func() {
+				// 下载主方案
+				rimeZip := downloader.DownloadWithCallback(constants.OhMyRimeRepo, progressCallback)
+				if rimeZip == nil {
+					callback("", fmt.Errorf("下载薄荷方案失败，请检查网络连接"))
+					return
+				}
+
+				if err := updater.UpdateMainScheme(rimeZip, targetDir); err != nil {
+					callback("", fmt.Errorf("更新薄荷方案失败: %v", err))
+					return
+				}
+
+				fmt.Println("✅ 薄荷方案更新完成")
+				callback(targetDir, nil)
+			}()
+		})
 	})
 }
 
 // updateModelConfigWithCallback 更新万象模型 - 对应 CLI 选项 2
 func updateModelConfigWithCallback(window fyne.Window, callback func(error)) {
-	updateModelConfigWithProgressCallback(window, nil, callback)
+	updateModelConfigWithProgressCallback(window, nil, func(_ string, err error) {
+		callback(err)
+	})
 }
 
 // 带进度回调的更新万象模型函数
-func updateModelConfigWithProgressCallback(window fyne.Window, progressCallback ProgressCallback, callback func(error)) {
+func updateModelConfigWithProgressCallback(window fyne.Window, progressCallback ProgressCallback, callback func(string, error)) {
 	fmt.Println("开始更新万象模型...")
-
-	// 下载模型
-	rimeGram := downloader.DownloadWithCallback(constants.WanXiangGRA, progressCallback)
-	if rimeGram == nil {
-		callback(fmt.Errorf("下载万象模型失败，请检查网络连接"))
-		return
-	}
 
 	// 获取目标目录（可能需要用户选择）
 	getTargetDirGUI(window, func(targetDir string, err error) {
 		if err != nil {
-			callback(fmt.Errorf("获取目标目录失败: %v", err))
+			callback("", fmt.Errorf("获取目标目录失败: %v", err))
 			return
 		}
 
-		if err := updater.UpdateModel(rimeGram, targetDir); err != nil {
-			callback(fmt.Errorf("更新万象模型失败: %v", err))
-			return
-		}
+		confirmTargetDirGUI(window, "更新万象模型", targetDir, func(confirmed bool) {
+			if !confirmed {
+				callback("", fmt.Errorf("用户取消了更新"))
+				return
+			}
 
-		fmt.Println("✅ 万象模型更新完成")
-		callback(nil)
+			go func() {
+				// 下载模型
+				rimeGram := downloader.DownloadWithCallback(constants.WanXiangGRA, progressCallback)
+				if rimeGram == nil {
+					callback("", fmt.Errorf("下载万象模型失败，请检查网络连接"))
+					return
+				}
+
+				if err := updater.UpdateModel(rimeGram, targetDir); err != nil {
+					callback("", fmt.Errorf("更新万象模型失败: %v", err))
+					return
+				}
+
+				fmt.Println("✅ 万象模型更新完成")
+				callback(targetDir, nil)
+			}()
+		})
 	})
 }
 
 // updateDictConfigWithCallback 更新万象词库 - 对应 CLI 选项 3
 func updateDictConfigWithCallback(window fyne.Window, callback func(error)) {
-	updateDictConfigWithProgressCallback(window, nil, callback)
+	updateDictConfigWithProgressCallback(window, nil, func(_ string, err error) {
+		callback(err)
+	})
 }
 
 // 带进度回调的更新万象词库函数
-func updateDictConfigWithProgressCallback(window fyne.Window, progressCallback ProgressCallback, callback func(error)) {
+func updateDictConfigWithProgressCallback(window fyne.Window, progressCallback ProgressCallback, callback func(string, error)) {
 	fmt.Println("开始更新万象词库（Lite版）...")
-
-	rimeZip := downloader.DownloadWithCallback(constants.OhMyRimeRepo, progressCallback)
-	if rimeZip == nil {
-		callback(fmt.Errorf("下载词库失败，请检查网络连接"))
-		return
-	}
 
 	// 获取目标目录（可能需要用户选择）
 	getTargetDirGUI(window, func(targetDir string, err error) {
 		if err != nil {
-			callback(fmt.Errorf("获取目标目录失败: %v", err))
+			callback("", fmt.Errorf("获取目标目录失败: %v", err))
 			return
 		}
 
-		if err := updater.UpdateDict(rimeZip, targetDir); err != nil {
-			callback(fmt.Errorf("更新万象词库失败: %v", err))
-			return
-		}
+		confirmTargetDirGUI(window, "更新万象词库（Lite版）", targetDir, func(confirmed bool) {
+			if !confirmed {
+				callback("", fmt.Errorf("用户取消了更新"))
+				return
+			}
 
-		fmt.Println("✅ 万象词库更新完成")
-		callback(nil)
+			go func() {
+				rimeZip := downloader.DownloadWithCallback(constants.OhMyRimeRepo, progressCallback)
+				if rimeZip == nil {
+					callback("", fmt.Errorf("下载词库失败，请检查网络连接"))
+					return
+				}
+
+				if err := updater.UpdateDict(rimeZip, targetDir); err != nil {
+					callback("", fmt.Errorf("更新万象词库失败: %v", err))
+					return
+				}
+
+				fmt.Println("✅ 万象词库更新完成")
+				callback(targetDir, nil)
+			}()
+		})
 	})
 }
 
 // customUpdateConfigWithCallback 自定义更新 - 对应 CLI 选项 4
 func customUpdateConfigWithCallback(window fyne.Window, customUrl string, callback func(error)) {
-	customUpdateConfigWithProgressCallback(window, customUrl, nil, callback)
+	customUpdateConfigWithProgressCallback(window, customUrl, nil, func(_ string, err error) {
+		callback(err)
+	})
 }
 
 // 带进度回调的自定义更新函数
-func customUpdateConfigWithProgressCallback(window fyne.Window, customUrl string, progressCallback ProgressCallback, callback func(error)) {
+func customUpdateConfigWithProgressCallback(window fyne.Window, customUrl string, progressCallback ProgressCallback, callback func(string, error)) {
 	fmt.Printf("开始自定义更新: %s\n", customUrl)
 
-	customData := downloader.DownloadWithCallback(customUrl, progressCallback)
-	if customData == nil {
-		callback(fmt.Errorf("下载自定义文件失败，请检查 URL 或网络连接"))
+	lowerURL := strings.ToLower(customUrl)
+	if !strings.HasSuffix(lowerURL, ".zip") && !strings.HasSuffix(lowerURL, ".gram") {
+		callback("", fmt.Errorf("不支持的文件类型，请提供 zip 或 gram 文件的 URL"))
 		return
 	}
 
 	// 获取目标目录（可能需要用户选择）
 	getTargetDirGUI(window, func(targetDir string, err error) {
 		if err != nil {
-			callback(fmt.Errorf("获取目标目录失败: %v", err))
+			callback("", fmt.Errorf("获取目标目录失败: %v", err))
 			return
 		}
 
-		// 判断文件类型
-		if strings.HasSuffix(customUrl, ".zip") {
-			// 如果是 zip 文件，更新主方案
-			if err := updater.UpdateMainScheme(customData, targetDir); err != nil {
-				callback(fmt.Errorf("更新自定义方案失败: %v", err))
+		confirmTargetDirGUI(window, "自定义更新", targetDir, func(confirmed bool) {
+			if !confirmed {
+				callback("", fmt.Errorf("用户取消了更新"))
 				return
 			}
-			fmt.Println("✅ 自定义方案更新完成")
-		} else if strings.HasSuffix(customUrl, ".gram") {
-			// 如果是 gram 文件，更新模型
-			if err := updater.UpdateModel(customData, targetDir); err != nil {
-				callback(fmt.Errorf("更新自定义模型失败: %v", err))
-				return
-			}
-			fmt.Println("✅ 自定义模型更新完成")
-		} else {
-			callback(fmt.Errorf("不支持的文件类型，请提供 zip 或 gram 文件的 URL"))
-			return
-		}
 
-		callback(nil)
+			go func() {
+				customData := downloader.DownloadWithCallback(customUrl, progressCallback)
+				if customData == nil {
+					callback("", fmt.Errorf("下载自定义文件失败，请检查 URL 或网络连接"))
+					return
+				}
+
+				// 判断文件类型
+				if strings.HasSuffix(lowerURL, ".zip") {
+					// 如果是 zip 文件，更新主方案
+					if err := updater.UpdateMainScheme(customData, targetDir); err != nil {
+						callback("", fmt.Errorf("更新自定义方案失败: %v", err))
+						return
+					}
+					fmt.Println("✅ 自定义方案更新完成")
+				} else {
+					// 如果是 gram 文件，更新模型
+					if err := updater.UpdateModel(customData, targetDir); err != nil {
+						callback("", fmt.Errorf("更新自定义模型失败: %v", err))
+						return
+					}
+					fmt.Println("✅ 自定义模型更新完成")
+				}
+
+				callback(targetDir, nil)
+			}()
+		})
 	})
 }
 

@@ -184,14 +184,16 @@ func (g *GUI) onUpdateMainScheme() {
 				percentage, downloader.FormatBytes(downloaded), downloader.FormatBytes(total), speedStr))
 		}
 
-		updateMainSchemeConfigWithProgressCallback(g.window, progressCallback, func(err error) {
+		updateMainSchemeConfigWithProgressCallback(g.window, progressCallback, func(targetDir string, err error) {
 			g.finishOperation("薄荷方案更新", err)
 
-			if err != nil {
-				dialog.ShowError(err, g.window)
-			} else {
-				dialog.ShowInformation("成功", "薄荷方案更新完成！", g.window)
-			}
+			fyne.Do(func() {
+				if err != nil {
+					dialog.ShowError(err, g.window)
+				} else {
+					showUpdateSuccessGUI(g.window, "薄荷方案更新完成", targetDir)
+				}
+			})
 		})
 	}()
 }
@@ -209,14 +211,16 @@ func (g *GUI) onUpdateModel() {
 				percentage, downloader.FormatBytes(downloaded), downloader.FormatBytes(total), speedStr))
 		}
 
-		updateModelConfigWithProgressCallback(g.window, progressCallback, func(err error) {
+		updateModelConfigWithProgressCallback(g.window, progressCallback, func(targetDir string, err error) {
 			g.finishOperation("万象模型更新", err)
 
-			if err != nil {
-				dialog.ShowError(err, g.window)
-			} else {
-				dialog.ShowInformation("成功", "万象模型更新完成！", g.window)
-			}
+			fyne.Do(func() {
+				if err != nil {
+					dialog.ShowError(err, g.window)
+				} else {
+					showUpdateSuccessGUI(g.window, "万象模型更新完成", targetDir)
+				}
+			})
 		})
 	}()
 }
@@ -234,14 +238,16 @@ func (g *GUI) onUpdateDict() {
 				percentage, downloader.FormatBytes(downloaded), downloader.FormatBytes(total), speedStr))
 		}
 
-		updateDictConfigWithProgressCallback(g.window, progressCallback, func(err error) {
+		updateDictConfigWithProgressCallback(g.window, progressCallback, func(targetDir string, err error) {
 			g.finishOperation("万象词库更新", err)
 
-			if err != nil {
-				dialog.ShowError(err, g.window)
-			} else {
-				dialog.ShowInformation("成功", "万象词库（Lite版）更新完成！", g.window)
-			}
+			fyne.Do(func() {
+				if err != nil {
+					dialog.ShowError(err, g.window)
+				} else {
+					showUpdateSuccessGUI(g.window, "万象词库（Lite版）更新完成", targetDir)
+				}
+			})
 		})
 	}()
 }
@@ -286,14 +292,16 @@ func (g *GUI) onCustomUpdate() {
 						percentage, downloader.FormatBytes(downloaded), downloader.FormatBytes(total), speedStr))
 				}
 
-				customUpdateConfigWithProgressCallback(g.window, customUrl, progressCallback, func(err error) {
+				customUpdateConfigWithProgressCallback(g.window, customUrl, progressCallback, func(targetDir string, err error) {
 					g.finishOperation("自定义更新", err)
 
-					if err != nil {
-						dialog.ShowError(err, g.window)
-					} else {
-						dialog.ShowInformation("成功", "自定义更新完成！", g.window)
-					}
+					fyne.Do(func() {
+						if err != nil {
+							dialog.ShowError(err, g.window)
+						} else {
+							showUpdateSuccessGUI(g.window, "自定义更新完成", targetDir)
+						}
+					})
 				})
 			}()
 		}, g.window)

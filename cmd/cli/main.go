@@ -25,6 +25,12 @@ func customUpdate() {
 	customUrl, _ := reader.ReadString('\n')
 	customUrl = strings.TrimSpace(customUrl)
 
+	lowerURL := strings.ToLower(customUrl)
+	if !strings.HasSuffix(lowerURL, ".zip") && !strings.HasSuffix(lowerURL, ".gram") {
+		fmt.Println("不支持的文件类型，请提供 zip 或 gram 文件的 URL")
+		return
+	}
+
 	customData := downloader.Download(customUrl)
 	if customData == nil {
 		fmt.Println("下载自定义方案失败，请检查 URL 或网络连接")
@@ -34,18 +40,16 @@ func customUpdate() {
 	targetDir := system.GetTargetDir()
 
 	// 判断文件类型
-	if strings.HasSuffix(customUrl, ".zip") {
+	if strings.HasSuffix(lowerURL, ".zip") {
 		// 如果是 zip 文件，更新主方案
 		if err := updater.UpdateMainScheme(customData, targetDir); err != nil {
 			fmt.Printf("更新自定义方案失败: %v\n", err)
 		}
-	} else if strings.HasSuffix(customUrl, ".gram") {
+	} else {
 		// 如果是 gram 文件，更新模型
 		if err := updater.UpdateModel(customData, targetDir); err != nil {
 			fmt.Printf("更新自定义模型失败: %v\n", err)
 		}
-	} else {
-		fmt.Println("不支持的文件类型，请提供 zip 或 gram 文件的 URL")
 	}
 }
 

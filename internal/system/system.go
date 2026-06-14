@@ -135,3 +135,22 @@ func OpenUrlBrowser(url string) {
 		fmt.Printf("打开浏览器失败: %v\n", err)
 	}
 }
+
+// OpenFolder 使用系统文件管理器打开目录
+func OpenFolder(path string) {
+	var cmd *exec.Cmd
+	switch DetectOS() {
+	case "Windows_NT":
+		cmd = exec.Command("explorer", path)
+	case "Linux":
+		cmd = exec.Command("xdg-open", path)
+	case "Darwin":
+		cmd = exec.Command("open", path)
+	default:
+		fmt.Println("不支持的操作系统，无法打开目录")
+		return
+	}
+	if err := cmd.Start(); err != nil {
+		fmt.Printf("打开目录失败: %v\n", err)
+	}
+}
