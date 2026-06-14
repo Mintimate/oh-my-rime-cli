@@ -21,6 +21,7 @@ $:
             attachments:
               - dist/linux/oh-my-rime-*
               - dist/windows/oh-my-rime-*.exe
+              - dict/macos/oh-my-rime-*
           exports:
             FILES: FILES
         - name: 输出附件

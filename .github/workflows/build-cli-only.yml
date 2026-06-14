@@ -1,0 +1,77 @@
+name: Build CLI Only
+
+on:
+  push:
+    tags:
+      - 'cli-v*'
+  workflow_dispatch:
+
+jobs:
+  build-cli:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # macOS builds
+          - goos: darwin
+            goarch: amd64
+            name: darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            name: darwin-arm64
+          # Linux builds
+          - goos: linux
+            goarch: amd64
+            name: linux-amd64
+          - goos: linux
+            goarch: arm64
+            name: linux-arm64
+          # Windows builds
+          - goos: windows
+            goarch: amd64
+            name: windows-amd64
+            ext: .exe
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+    
+    - name: Build CLI ${{ matrix.name }}
+      run: |
+        export GOOS=${{ matrix.goos }}
+        export GOARCH=${{ matrix.goarch }}
+        export CGO_ENABLED=0
+        go build -ldflags="-s -w" -o oh-my-rime-cli-${{ matrix.name }}${{ matrix.ext }} ./cmd/cli
+    
+    - name: Upload CLI ${{ matrix.name }} artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: oh-my-rime-cli-${{ matrix.name }}
+        path: oh-my-rime-cli-${{ matrix.name }}${{ matrix.ext }}
+
+  release-cli:
+    needs: build-cli
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+    
+    - name: Create CLI Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          oh-my-rime-cli-darwin-amd64/oh-my-rime-cli-darwin-amd64
+          oh-my-rime-cli-darwin-arm64/oh-my-rime-cli-darwin-arm64
+          oh-my-rime-cli-linux-amd64/oh-my-rime-cli-linux-amd64
+          oh-my-rime-cli-linux-arm64/oh-my-rime-cli-linux-arm64
+          oh-my-rime-cli-windows-amd64/oh-my-rime-cli-windows-amd64.exe
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

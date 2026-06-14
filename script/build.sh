@@ -30,7 +30,7 @@ fi
 
 # 获取版本信息用于文件名
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_VERSION=$(bash "$SCRIPT_DIR/get_version.sh" version)
+APP_VERSION=$(bash "$SCRIPT_DIR/script/get_version.sh" version)
 
 # 移动 macOS 构建结果到 dist 目录
 if [ -f "Oh My Rime.app" ]; then
@@ -46,6 +46,10 @@ echo "📦 构建 Linux CLI..."
 mkdir -p dist/linux
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/linux/oh-my-rime-cli-linux-amd64 ./cmd/cli
 CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/linux/oh-my-rime-cli-linux-arm64 ./cmd/cli
+echo "📦 顺便构建 macOS CLI..."
+mkdir -p dist/macos
+CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/macos/oh-my-rime-cli-darwin-amd64 ./cmd/cli
+CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/macos/oh-my-rime-cli-darwin-arm64 ./cmd/cli
 
 echo "🎨 构建 Linux GUI..."
 # Linux GUI 需要在 Linux 系统上构建，这里只构建 CLI 版本

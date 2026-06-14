@@ -1,0 +1,165 @@
+name: Build macOS GUI
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-macos-gui:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+    
+    - name: Install dependencies
+      run: |
+        # 安装必要的依赖
+        go mod tidy
+    
+    - name: Build GUI for macOS ${{ matrix.arch }}
+      run: |
+        export GOOS=darwin
+        export GOARCH=${{ matrix.arch }}
+        export CGO_ENABLED=1
+        go build -ldflags="-s -w" -o oh-my-rime-gui-darwin-${{ matrix.arch }} .
+    
+    - name: Create App Bundle for ${{ matrix.arch }}
+      run: |
+        APP_NAME="Oh My Rime.app"
+        mkdir -p "$APP_NAME/Contents/MacOS"
+        mkdir -p "$APP_NAME/Contents/Resources"
+        
+        # 移动可执行文件
+        mv oh-my-rime-gui-darwin-${{ matrix.arch }} "$APP_NAME/Contents/MacOS/oh-my-rime-gui"
+        chmod +x "$APP_NAME/Contents/MacOS/oh-my-rime-gui"
+        
+        # 复制图标文件
+        echo "🔍 检查图标文件..."
+        echo "📁 当前工作目录: $(pwd)"
+        echo "📁 查找所有 .icns 文件:"
+        find . -name "*.icns" -type f 2>/dev/null || echo "未找到任何 .icns 文件"
+        
+        # 尝试多个可能的图标路径
+        ICON_PATHS=(
+          "script/build/macOS/icon.icns"
+          "build/macOS/icon.icns"
+          "assets/icon.icns"
+          "icon.icns"
+        )
+        
+        ICON_COPIED=false
+        for icon_path in "${ICON_PATHS[@]}"; do
+          if [ -f "$icon_path" ]; then
+            echo "✅ 找到图标文件: $icon_path"
+            ls -la "$icon_path"
+            cp "$icon_path" "$APP_NAME/Contents/Resources/icon.icns"
+            echo "✅ 图标已复制到: $APP_NAME/Contents/Resources/icon.icns"
+            ls -la "$APP_NAME/Contents/Resources/icon.icns"
+            ICON_COPIED=true
+            break
+          fi
+        done
+        
+        if [ "$ICON_COPIED" = false ]; then
+          echo "❌ 未找到图标文件，尝试的路径:"
+          for icon_path in "${ICON_PATHS[@]}"; do
+            echo "  • $icon_path"
+          done
+          echo "📁 script/build/macOS/ 目录内容:"
+          ls -la script/build/macOS/ 2>/dev/null || echo "目录不存在"
+        fi
+        
+        # 验证最终的应用包结构
+        echo "📁 应用包结构:"
+        find "$APP_NAME" -type f -exec ls -la {} \;
+        
+        # 获取版本信息
+        VERSION=$(git describe --tags --always 2>/dev/null || echo "1.0.0")
+        
+        # 创建 Info.plist
+        cat > "$APP_NAME/Contents/Info.plist" << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleExecutable</key>
+            <string>oh-my-rime-gui</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.rime.oh-my-rime</string>
+            <key>CFBundleName</key>
+            <string>Oh My Rime</string>
+            <key>CFBundleDisplayName</key>
+            <string>Oh My Rime</string>
+            <key>CFBundleVersion</key>
+            <string>$VERSION</string>
+            <key>CFBundleShortVersionString</key>
+            <string>$VERSION</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleIconFile</key>
+            <string>icon.icns</string>
+            <key>LSUIElement</key>
+            <false/>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+            <key>NSAppTransportSecurity</key>
+            <dict>
+                <key>NSAllowsArbitraryLoads</key>
+                <true/>
+            </dict>
+        </dict>
+        </plist>
+        EOF
+    
+    - name: Sign App Bundle (Ad-hoc signing)
+      run: |
+        APP_NAME="Oh My Rime.app"
+        
+        # 使用 ad-hoc 签名（自签名）
+        codesign --force --deep --sign - "$APP_NAME"
+        
+        # 验证签名
+        codesign --verify --verbose "$APP_NAME"
+        
+        # 移除扩展属性（隔离标记）
+        xattr -cr "$APP_NAME"
+    
+    - name: Create DMG for ${{ matrix.arch }}
+      run: |
+        APP_NAME="Oh My Rime.app"
+        DMG_NAME="Oh-My-Rime-${{ matrix.arch }}.dmg"
+        
+        # 创建临时目录
+        TEMP_DIR="dmg_temp_${{ matrix.arch }}"
+        mkdir -p "$TEMP_DIR"
+        
+        # 复制应用到临时目录
+        cp -R "$APP_NAME" "$TEMP_DIR/"
+        
+        # 创建 Applications 链接
+        ln -s /Applications "$TEMP_DIR/Applications"
+        
+        # 创建 DMG
+        hdiutil create -srcfolder "$TEMP_DIR" -volname "Oh My Rime" \
+          -format UDZO -imagekey zlib-level=9 "$DMG_NAME"
+        
+        # 清理临时目录
+        rm -rf "$TEMP_DIR"
+        
+        # 签名 DMG
+        codesign --force --sign - "$DMG_NAME"
+    
+    - name: Upload macOS GUI ${{ matrix.arch }} artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: oh-my-rime-gui-darwin-${{ matrix.arch }}
+        path: Oh-My-Rime-${{ matrix.arch }}.dmg
