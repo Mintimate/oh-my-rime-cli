@@ -63,6 +63,8 @@ flowchart TD
 
 ## Dependencies
 - Go 1.24 or above
+- Node.js 18+ and npm (for frontend building)
+- Wails v2: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - On Windows, requires `golang.org/x/sys/windows/registry` package
 
 ## Download & Installation
@@ -82,36 +84,39 @@ You can download pre-compiled versions from the [Releases](https://github.com/Mi
 
 ### Security Notice
 
-⚠️ **Important Reminder**: Since the project is not code-signed, Windows Defender and other antivirus software may falsely report it as a virus. For example, macOS may show an error when opening the DMG:
+⚠️ **Important Reminder**: Since the project is an open-source tool without paid Apple Developer / Windows certificates, it might be falsely reported as untrusted software.
 
-![macOS DMG Opening Error](./assets/img/openDmgWarning.webp)
+**For macOS Users (Gatekeeper Bypass):**
+When opening the downloaded DMG or the `.app`, you might see a "damaged app" or "unidentified developer" warning. Please use one of the following methods to bypass:
+1. **(Recommended) Clear quarantine attribute**: Drag the app to your `Applications` folder, then open your Terminal and run the following command:
+   ```sh
+   xattr -cr /Applications/Oh\ My\ Rime.app
+   ```
+2. **Right-Click Method**: Drag the app to your `Applications` folder. **Do not double-click it**. Instead, **Right-Click -> Open**. The warning dialog will now have an "Open" button.
 
-You need to allow it in **Security & Privacy** settings, and then opening the App may require another permission:
-
-![macOS App Opening Error](./assets/img/openAppWarning.webp)
-
-This is a common issue with Go-compiled programs. Please:
-- Ensure you download from the official GitHub Releases page
-- Add to trust/whitelist in your antivirus software
-- Or choose to compile the source code yourself
+**For Windows Users:**
+Windows Defender might falsely report it as a virus. Please ensure you download from the official GitHub Releases page and add it to your antivirus whitelist.
 
 ## Usage
 
-### 1. Build
+### 1. Build (Wails)
+
+This project GUI is built with Wails. Ensure you have Wails CLI installed.
 
 #### Windows
-Build directly on Windows:
+Build on Windows:
 ```sh
-# Recommended to run in Windows command line
 cd oh-my-rime-cli
-go build -o oh-my-rime-cli.exe .
+wails build -upx
+# The compiled file will be generated in the build/bin/ directory
 ```
 
 #### macOS/Linux
 Build on macOS or Linux:
 ```sh
 cd oh-my-rime-cli
-go build -o oh-my-rime-cli .
+wails build
+# macOS will generate a .app application inside build/bin/
 ```
 
 #### Cross-compile for Windows

@@ -39,29 +39,13 @@ if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
     export CGO_ENABLED=1
     export CC=x86_64-w64-mingw32-gcc
     
-    # 编译资源文件
-    if command -v x86_64-w64-mingw32-windres &> /dev/null; then
-        echo "🔧 生成动态资源文件..."
-        bash script/generate_windows_rc.sh
-        
-        echo "🔧 编译资源文件..."
-        x86_64-w64-mingw32-windres -i script/build/windows/resources/app.rc -o dist/windows/app.syso -O coff
-        
-        # 临时复制资源文件到根目录
-        cp dist/windows/app.syso ./
-        
-        # 构建带图标的 GUI 版本
-        go build -ldflags="-s -w -H windowsgui" -o dist/windows/oh-my-rime-gui.exe .
-        
-        # 清理临时文件
-        rm -f ./app.syso
-        
-        echo "✅ GUI 版本构建完成（包含图标）"
-    else
-        # 没有 windres，构建无图标版本
-        go build -ldflags="-s -w -H windowsgui" -o dist/windows/oh-my-rime-gui.exe .
-        echo "⚠️  GUI 版本构建完成（无图标）"
-    fi
+    echo "🔧 使用 Wails 构建带图标的 GUI 版本..."
+    wails build -platform windows/amd64 -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=$APP_VERSION'" -clean
+    
+    # 临时复制结果到 dist 目录
+    cp build/bin/oh-my-rime-gui.exe dist/windows/
+    
+    echo "✅ GUI 版本构建完成"
 else
     echo "⚠️  未找到 mingw-w64，跳过 GUI 版本"
     echo "   安装方法："

@@ -63,6 +63,8 @@ flowchart TD
 
 ## 依赖说明
 - Go 1.24 及以上
+- Node.js 18+及npm (用于编译前端)
+- Wails v2: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - Windows 平台需支持 `golang.org/x/sys/windows/registry` 包
 
 ## 下载与安装
@@ -82,36 +84,39 @@ flowchart TD
 
 ### 安全提示
 
-⚠️ **重要提醒**：由于项目未进行代码签名，Windows Defender 和其他杀毒软件可能会误报为病毒，比如 macOS 打开 DMG 报错：
+⚠️ **重要提醒**：由于项目由开源社区维护，未购买并进行 Apple Developer / Windows 签名，可能被识别为未知来源程序。
 
-![macOS 上打开 DMG 报错](./assets/img/openDmgWarning.webp)
+**对于 macOS 用户 (Gatekeeper 绕过指南):**
+打开 DMG 安装包或应用程序时可能会提示“已损坏，无法打开”或“无法验证开发者”。请使用以下两种方法之一绕过拦截：
+1. **(推荐) 彻底清理隔离属性**：将应用拖入 `应用程序 (Applications)` 文件夹后，打开终端，执行以下命令即可一劳永逸：
+   ```sh
+   xattr -cr /Applications/Oh\ My\ Rime.app
+   ```
+2. **右键打开法**：将应用拖入 `应用程序` 文件夹后，**不要双击**，而是对着 `Oh My Rime.app` **右键 -> 打开**。在弹出的警告框中会多出一个“打开”按钮，点击即可。
 
-需要在**安全性**内允许打开，之后打开 App 可能还需要一次：
-
-![macOS 上打开 App 报错](./assets/img/openAppWarning.webp)
-
-这是 Go 编译程序的常见问题，请：
-- 确保从官方 GitHub Releases 页面下载
-- 在杀毒软件中添加信任/白名单
-- 或选择自行编译源码
+**对于 Windows 用户:**
+Windows Defender 可能会误报为病毒。请确保从官方 GitHub Releases 页面下载，并在杀毒软件中将其添加为信任/白名单。
 
 ## 使用方法
 
-### 1. 编译
+### 1. 编译 (Wails)
+
+本项目 GUI 基于 Wails 开发，请确保已安装 Wails CLI。
 
 #### Windows
-在 Windows 下直接编译：
+在 Windows 下编译：
 ```sh
-# 推荐在 Windows 命令行下执行
 cd oh-my-rime-cli
-go build -o oh-my-rime-cli.exe .
+wails build -upx
+# 编译后的文件将生成在 build/bin/ 目录下
 ```
 
 #### macOS/Linux
 在 macOS 或 Linux 下编译：
 ```sh
 cd oh-my-rime-cli
-go build -o oh-my-rime-cli .
+wails build
+# macOS 将在 build/bin/ 下生成 .app 应用程序
 ```
 
 #### 交叉编译 Windows 版本

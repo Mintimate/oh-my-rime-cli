@@ -10,12 +10,16 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"oh-my-rime-cli/internal/system"
 )
+
 
 const backupKeepCount = 3
 
 // UpdateMainScheme 更新主方案
 func UpdateMainScheme(rimeZip []byte, targetDir string) error {
+	targetDir = system.ExpandHomeDir(targetDir)
 	fmt.Println("正在更新主方案...")
 
 	// 检查zip数据是否有效
@@ -73,6 +77,7 @@ func UpdateMainScheme(rimeZip []byte, targetDir string) error {
 
 // UpdateModel 更新模型文件
 func UpdateModel(rimeGram []byte, targetDir string) error {
+	targetDir = system.ExpandHomeDir(targetDir)
 	fmt.Println("正在更新模型...")
 
 	// 检查模型数据是否有效
@@ -98,6 +103,7 @@ func UpdateModel(rimeGram []byte, targetDir string) error {
 
 // UpdateDict 更新词库
 func UpdateDict(rimeZip []byte, targetDir string) error {
+	targetDir = system.ExpandHomeDir(targetDir)
 	fmt.Println("正在更新词库...")
 
 	// 检查zip数据是否有效

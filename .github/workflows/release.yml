@@ -17,11 +17,12 @@ permissions:
 env:
   GO_VERSION: "1.23.4"
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -34,7 +35,10 @@ jobs:
       - name: Install GUI build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
+
+      - name: Setup dummy frontend for testing
+        run: mkdir -p frontend/dist && touch frontend/dist/index.html
 
       - name: Run tests
         run: go test -vet=off ./...
@@ -42,7 +46,7 @@ jobs:
   build-cli:
     name: CLI ${{ matrix.name }}
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -75,8 +79,9 @@ jobs:
       - name: Build CLI
         run: |
           mkdir -p dist
+          mkdir -p frontend/dist && touch frontend/dist/index.html
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -ldflags="-s -w" \
+            go build -ldflags="-s -w -X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" \
             -o dist/oh-my-rime-cli-${{ env.RELEASE_TAG }}-${{ matrix.name }}${{ matrix.ext }} ./cmd/cli
 
       - name: Upload CLI artifact
@@ -103,70 +108,30 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
       - name: Build macOS GUI
         run: |
           mkdir -p dist
-          CGO_ENABLED=1 GOOS=darwin GOARCH=${{ matrix.arch }} \
-            go build -ldflags="-s -w" -o dist/oh-my-rime-gui .
-
-      - name: Create app bundle
-        run: |
-          APP_NAME="Oh My Rime.app"
-          mkdir -p "$APP_NAME/Contents/MacOS" "$APP_NAME/Contents/Resources"
-          mv dist/oh-my-rime-gui "$APP_NAME/Contents/MacOS/oh-my-rime-gui"
-          chmod +x "$APP_NAME/Contents/MacOS/oh-my-rime-gui"
-          cp script/build/macOS/icon.icns "$APP_NAME/Contents/Resources/icon.icns"
-
-          cat > "$APP_NAME/Contents/Info.plist" << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>CFBundleExecutable</key>
-              <string>oh-my-rime-gui</string>
-              <key>CFBundleIdentifier</key>
-              <string>com.rime.oh-my-rime</string>
-              <key>CFBundleName</key>
-              <string>Oh My Rime</string>
-              <key>CFBundleDisplayName</key>
-              <string>Oh My Rime</string>
-              <key>CFBundleVersion</key>
-              <string>${RELEASE_TAG#v}</string>
-              <key>CFBundleShortVersionString</key>
-              <string>${RELEASE_TAG#v}</string>
-              <key>CFBundlePackageType</key>
-              <string>APPL</string>
-              <key>CFBundleIconFile</key>
-              <string>icon.icns</string>
-              <key>LSUIElement</key>
-              <false/>
-              <key>NSHighResolutionCapable</key>
-              <true/>
-              <key>NSAppTransportSecurity</key>
-              <dict>
-                  <key>NSAllowsArbitraryLoads</key>
-                  <true/>
-              </dict>
-          </dict>
-          </plist>
-          EOF
+          wails build -platform darwin/${{ matrix.arch }} -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -clean
+          mv "build/bin/oh-my-rime-cli.app" "build/bin/Oh My Rime.app"
 
       - name: Sign app bundle
         run: |
-          codesign --force --deep --sign - "Oh My Rime.app"
-          codesign --verify --verbose "Oh My Rime.app"
-          xattr -cr "Oh My Rime.app"
+          codesign --force --deep --sign - "build/bin/Oh My Rime.app"
+          codesign --verify --verbose "build/bin/Oh My Rime.app"
+          xattr -cr "build/bin/Oh My Rime.app"
 
       - name: Create DMG
         run: |
           DMG_NAME="Oh-My-Rime-${RELEASE_TAG}-macos-${{ matrix.arch }}.dmg"
           TEMP_DIR="dmg-temp-${{ matrix.arch }}"
           mkdir -p "$TEMP_DIR"
-          cp -R "Oh My Rime.app" "$TEMP_DIR/"
+          cp -R "build/bin/Oh My Rime.app" "$TEMP_DIR/"
           ln -s /Applications "$TEMP_DIR/Applications"
           hdiutil create -srcfolder "$TEMP_DIR" -volname "Oh My Rime" \
             -format UDZO -imagekey zlib-level=9 "dist/$DMG_NAME"
-          codesign --force --sign - "dist/$DMG_NAME"
 
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v4
@@ -178,7 +143,7 @@ jobs:
   build-windows-app:
     name: Windows App amd64
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -193,25 +158,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-mingw-w64 zip
 
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
       - name: Build Windows GUI and CLI
         run: |
           mkdir -p dist/windows
 
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
-            go build -ldflags="-s -w" -o dist/windows/oh-my-rime-cli.exe ./cmd/cli
+            go build -ldflags="-s -w -X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -o dist/windows/oh-my-rime-cli.exe ./cmd/cli
 
-          bash script/generate_windows_rc.sh
-          x86_64-w64-mingw32-windres \
-            -i script/build/windows/resources/app.rc \
-            -o app.syso \
-            -O coff
+          wails build -platform windows/amd64 -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -clean
+          cp build/bin/oh-my-rime-gui.exe dist/windows/
 
-          CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc \
-            go build -ldflags="-s -w -H windowsgui" -o dist/windows/oh-my-rime-gui.exe .
-
-          rm -f app.syso
           cp README.md LICENSE dist/windows/
-          cp script/build/windows/resources/app.ico dist/windows/
 
           cat > dist/windows/start-gui.bat << 'EOF'
           @echo off
@@ -238,7 +198,7 @@ jobs:
   build-linux-app:
     name: Linux App amd64
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -251,15 +211,19 @@ jobs:
       - name: Install Linux GUI build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
       - name: Build Linux GUI and CLI
         run: |
           mkdir -p dist/linux
-          CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
-            go build -ldflags="-s -w" -o dist/linux/oh-my-rime-gui .
+          wails build -platform linux/amd64 -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -clean
+          cp build/bin/oh-my-rime-gui dist/linux/
+
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-            go build -ldflags="-s -w" -o dist/linux/oh-my-rime-cli ./cmd/cli
+            go build -ldflags="-s -w -X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -o dist/linux/oh-my-rime-cli ./cmd/cli
           cp README.md LICENSE dist/linux/
           tar -C dist -czf "dist/Oh-My-Rime-${RELEASE_TAG}-linux-amd64.tar.gz" linux
 
@@ -277,7 +241,7 @@ jobs:
       - build-macos-app
       - build-windows-app
       - build-linux-app
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 

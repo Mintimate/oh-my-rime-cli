@@ -8,7 +8,9 @@ on:
 
 jobs:
   test-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
     - uses: actions/checkout@v4
     
@@ -20,7 +22,10 @@ jobs:
     - name: Install dependencies for GUI build
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgl1-mesa-dev xorg-dev
+        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
+
+    - name: Setup dummy frontend for testing
+      run: mkdir -p frontend/dist && touch frontend/dist/index.html
     
     - name: Test build CLI
       run: |

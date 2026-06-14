@@ -10,75 +10,19 @@ APP_OPENSOURCE=$(bash "$SCRIPT_DIR/get_version.sh" opensource)
 
 echo "🚀 构建macOS GUI版本 v$APP_VERSION..."
 
-# 构建Go应用
-echo "🔨 编译Go应用..."
-go build -o oh-my-rime-gui .
+# 构建Go应用 (Wails)
+echo "🔨 使用 Wails 编译 Universal macOS 应用..."
+wails build -platform darwin/universal -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=$APP_VERSION'" -clean
 
 if [ $? -ne 0 ]; then
-    echo "❌ Go编译失败"
+    echo "❌ Wails 编译失败"
     exit 1
 fi
 
 echo "✅ 编译成功！"
 
-# 创建macOS应用包结构
-APP_NAME="Oh My Rime.app"
-echo "📦 创建应用包: $APP_NAME"
-
-# 清理旧的应用包
-rm -rf "$APP_NAME"
-
-mkdir -p "$APP_NAME/Contents/MacOS"
-mkdir -p "$APP_NAME/Contents/Resources"
-
-# 移动可执行文件到应用包
-mv oh-my-rime-gui "$APP_NAME/Contents/MacOS/oh-my-rime-gui"
-
-# 创建简单的图标（使用系统默认图标）
-# 如果有icon.icns就使用，否则跳过
-if [ -f "script/build/macOS/icon.icns" ]; then
-    cp "script/build/macOS/icon.icns" "$APP_NAME/Contents/Resources/icon.icns"
-    ICON_KEY="    <key>CFBundleIconFile</key>
-    <string>icon.icns</string>"
-else
-    ICON_KEY=""
-fi
-
-# 创建Info.plist文件
-cat > "$APP_NAME/Contents/Info.plist" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>oh-my-rime-gui</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.rime.oh-my-rime</string>
-    <key>CFBundleName</key>
-    <string>Oh My Rime</string>
-    <key>CFBundleDisplayName</key>
-    <string>$APP_NAME_CONST</string>
-    <key>CFBundleVersion</key>
-    <string>$APP_VERSION</string>
-    <key>CFBundleShortVersionString</key>
-    <string>$APP_VERSION</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-$ICON_KEY
-    <key>LSUIElement</key>
-    <false/>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsArbitraryLoads</key>
-        <true/>
-    </dict>
-</dict>
-</plist>
-EOF
-
-echo "✅ 应用包创建完成"
+mv "build/bin/oh-my-rime-cli.app" "build/bin/Oh My Rime.app"
+APP_NAME="build/bin/Oh My Rime.app"
 
 # 签名应用包
 echo "🔐 签名应用包..."
@@ -139,30 +83,20 @@ hdiutil create -srcfolder "$TEMP_DIR" -volname "Oh My Rime" -format UDZO \
 if [ $? -eq 0 ]; then
     echo "✅ DMG创建成功: $DMG_NAME"
     
-    # 签名 DMG
-    echo "🔐 签名DMG..."
-    codesign --force --sign - "$DMG_NAME"
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ DMG签名成功"
-    else
-        echo "⚠️  DMG签名失败，但文件仍可使用"
-    fi
-    
     # 清理临时文件
     rm -rf "$TEMP_DIR"
     
     echo ""
     echo "🎉 构建完成！"
     echo "📁 生成文件："
-    echo "  • $APP_NAME (应用包)"
-    echo "  • $DMG_NAME (安装包)"
+    echo "  • $APP_NAME (原始应用包，在 build/bin/ 下)"
+    echo "  • $DMG_NAME (分发安装包)"
     echo ""
     echo "使用方法："
     echo "  1. 双击 '$DMG_NAME' 打开安装包"
     echo "  2. 将应用拖拽到Applications文件夹"
     echo "  3. 双击应用启动GUI模式（无控制台窗口）"
-    echo "  4. 或使用 ./oh-my-rime-test 启动CLI模式"
+    echo "  4. 或执行 dist/macos/ 下的 CLI 版本"
     echo ""
     echo "📝 注意事项："
     echo "  • 应用已使用 ad-hoc 签名，应该不会显示'已损坏'错误"

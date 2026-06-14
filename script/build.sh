@@ -1,5 +1,4 @@
 #!/bin/bash
-#!/bin/bash
 
 set -e
 
@@ -8,6 +7,18 @@ echo "================================"
 
 echo "📦 安装基础 GO 依赖..."
 go mod tidy
+
+if ! command -v wails &> /dev/null; then
+    echo "📦 安装 Wails CLI..."
+    go install github.com/wailsapp/wails/v2/cmd/wails@latest
+    export PATH=$PATH:$(go env GOPATH)/bin
+fi
+
+if ! command -v npm &> /dev/null; then
+    echo "❌ 错误: 未找到 Node.js (npm)，Wails 构建前端需要 Node.js"
+    echo "   请先安装 Node.js"
+    exit 1
+fi
 
 echo ""
 echo "🎯 开始全平台构建..."

@@ -8,10 +8,14 @@ import (
 
 	"oh-my-rime-cli/internal/constants"
 	"oh-my-rime-cli/internal/downloader"
-	"oh-my-rime-cli/internal/gui"
 	"oh-my-rime-cli/internal/system"
 	"oh-my-rime-cli/internal/updater"
+
+	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/options"
+	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
+
 
 // 自定义更新函数
 func customUpdate() {
@@ -183,7 +187,24 @@ func main() {
 		// 有参数时，启动CLI模式
 		runInteractiveMenu()
 	} else {
-		// 无参数时（双击启动），启动GUI模式
-		gui.StartGUIApp()
+		// 无参数时（双击启动），启动 Wails GUI 模式
+		app := NewApp()
+
+		err := wails.Run(&options.App{
+			Title:  "Oh My Rime - 输入法配置管理工具",
+			Width:  1024,
+			Height: 768,
+			AssetServer: &assetserver.Options{
+				Assets: frontendAssets, // from embed.go
+			},
+			OnStartup: app.startup,
+			Bind: []interface{}{
+				app,
+			},
+		})
+
+		if err != nil {
+			fmt.Println("Error:", err.Error())
+		}
 	}
 }

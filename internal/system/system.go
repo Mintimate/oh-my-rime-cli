@@ -154,3 +154,20 @@ func OpenFolder(path string) {
 		fmt.Printf("打开目录失败: %v\n", err)
 	}
 }
+
+// ExpandHomeDir 展开路径中的 ~ 为实际的用户主目录
+func ExpandHomeDir(path string) string {
+	if strings.HasPrefix(path, "~/") || strings.HasPrefix(path, "~\\") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			return filepath.Join(home, path[2:])
+		}
+	} else if path == "~" {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			return home
+		}
+	}
+	return path
+}
+

@@ -35,3 +35,14 @@ dist
 # ai
 .agents/
 skills-lock.json
+
+# Wails
+build/bin/
+build/obj/
+frontend/dist/
+frontend/node_modules/
+frontend/.npm/
+frontend/package.json.md5
+
+# VSCODE
+frontend/.vscode

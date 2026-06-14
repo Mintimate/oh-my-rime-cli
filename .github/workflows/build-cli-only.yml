@@ -8,7 +8,9 @@ on:
 
 jobs:
   build-cli:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     strategy:
       matrix:
         include:
@@ -44,7 +46,8 @@ jobs:
         export GOOS=${{ matrix.goos }}
         export GOARCH=${{ matrix.goarch }}
         export CGO_ENABLED=0
-        go build -ldflags="-s -w" -o oh-my-rime-cli-${{ matrix.name }}${{ matrix.ext }} ./cmd/cli
+        mkdir -p frontend/dist && touch frontend/dist/index.html
+        go build -ldflags="-s -w -X 'oh-my-rime-cli/internal/constants.AppVersion=${{ github.ref_name }}'" -o oh-my-rime-cli-${{ matrix.name }}${{ matrix.ext }} ./cmd/cli
     
     - name: Upload CLI ${{ matrix.name }} artifact
       uses: actions/upload-artifact@v4
@@ -54,7 +57,9 @@ jobs:
 
   release-cli:
     needs: build-cli
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     if: startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v4

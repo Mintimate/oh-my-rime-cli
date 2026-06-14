@@ -6,6 +6,12 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
 APP_VERSION=$(bash "$SCRIPT_DIR/get_version.sh" version)
+# 优先使用环境变量 RELEASE_TAG
+if [ -n "$RELEASE_TAG" ]; then
+    # 去除可能的 'v' 前缀
+    APP_VERSION="${RELEASE_TAG#v}"
+fi
+
 APP_NAME=$(bash "$SCRIPT_DIR/get_version.sh" name)
 APP_AUTHOR=$(bash "$SCRIPT_DIR/get_version.sh" author)
 APP_OPENSOURCE=$(bash "$SCRIPT_DIR/get_version.sh" opensource)

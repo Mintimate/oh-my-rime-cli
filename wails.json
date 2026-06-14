@@ -1,0 +1,13 @@
+{
+  "$schema": "https://wails.io/schemas/wails.json",
+  "name": "oh-my-rime-cli",
+  "outputfilename": "oh-my-rime-gui",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Mintimate",
+    "email": "mintimate@example.com"
+  }
+}

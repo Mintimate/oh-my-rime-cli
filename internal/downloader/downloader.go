@@ -87,7 +87,14 @@ func DownloadWithCallback(url string, callback ProgressCallback) []byte {
 	fmt.Printf("正在下载: %s\n", url)
 
 	// 创建HTTP请求
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		fmt.Printf("\n创建请求失败: %v\n", err)
+		return nil
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Printf("\n请求失败: %v\n", err)
 		return nil
@@ -97,6 +104,13 @@ func DownloadWithCallback(url string, callback ProgressCallback) []byte {
 	// 检查HTTP状态码
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf("\nHTTP错误: %s\n", resp.Status)
+		return nil
+	}
+
+	// 防止下载 HTML 登录页或错误页 (如 5.2MB 的回退页面)
+	contentType := resp.Header.Get("Content-Type")
+	if strings.Contains(contentType, "text/html") {
+		fmt.Printf("\n错误: 下载内容是 HTML 页面，而不是文件。链接可能无效或需要权限认证。\n")
 		return nil
 	}
 

@@ -11,11 +11,14 @@ RUN apt update && \
     openssh-server \
     vim \
     webp && \
+    curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
+    apt install -y nodejs && \
     chsh -s /bin/zsh
 
-# 安装 golang-mingw 交叉编译工具链
+# 安装 golang-mingw 交叉编译工具链以及 Wails Linux GUI 依赖
 RUN apt install -y \
-    gcc-mingw-w64
+    gcc-mingw-w64 \
+    libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
 
 RUN yes | zsh -c "$(wget -qO- 'https://cnb.cool/Mintimate/tool-forge/oh-my-zsh/-/git/raw/main/AutoInstallZshWithPlugin.sh')"
 
