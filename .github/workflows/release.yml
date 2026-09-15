@@ -51,24 +51,28 @@ jobs:
             runner: macos-15
             args: --target aarch64-apple-darwin --bundles app,dmg
             rust_target: aarch64-apple-darwin
+            apple_signing_identity: "-"
             asset_os: macOS
             asset_arch: arm64
           - name: macOS Intel
             runner: macos-15-intel
             args: --target x86_64-apple-darwin --bundles app,dmg
             rust_target: x86_64-apple-darwin
+            apple_signing_identity: "-"
             asset_os: macOS
             asset_arch: x64
           - name: Windows x64
             runner: windows-latest
             args: --bundles msi,nsis
             rust_target: ""
+            apple_signing_identity: ""
             asset_os: Windows
             asset_arch: x64
           - name: Linux x64
             runner: ubuntu-22.04
             args: --bundles deb,rpm,appimage
             rust_target: ""
+            apple_signing_identity: ""
             asset_os: Linux
             asset_arch: x64
     steps:
@@ -90,6 +94,8 @@ jobs:
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Sign the macOS app bundle; updater artifact signatures are configured separately.
+          APPLE_SIGNING_IDENTITY: ${{ matrix.apple_signing_identity }}
         with:
           tauriScript: npm run tauri
           args: ${{ matrix.args }}
@@ -99,6 +105,14 @@ jobs:
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           releaseBody: "See the generated release notes for changes in this version."
           releaseAssetNamePattern: Oh-My-Rime_[version]_${{ matrix.asset_os }}_${{ matrix.asset_arch }}[setup][ext]
+
+      - name: Verify macOS app signature
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          app_path="src-tauri/target/${{ matrix.rust_target }}/release/bundle/macos/Oh My Rime.app"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+          codesign --display --verbose=4 "$app_path"
 
   build-cli:
     name: CLI ${{ matrix.name }}
