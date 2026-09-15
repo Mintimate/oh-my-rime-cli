@@ -48,13 +48,13 @@ jobs:
       matrix:
         include:
           - name: macOS Apple Silicon
-            runner: macos-14
+            runner: macos-15
             args: --target aarch64-apple-darwin --bundles app,dmg
             rust_target: aarch64-apple-darwin
             asset_os: macOS
             asset_arch: arm64
           - name: macOS Intel
-            runner: macos-13
+            runner: macos-15-intel
             args: --target x86_64-apple-darwin --bundles app,dmg
             rust_target: x86_64-apple-darwin
             asset_os: macOS
@@ -109,11 +109,11 @@ jobs:
       matrix:
         include:
           - name: macOS arm64
-            runner: macos-14
+            runner: macos-15
             target: aarch64-apple-darwin
             suffix: macos-arm64
           - name: macOS x64
-            runner: macos-13
+            runner: macos-15-intel
             target: x86_64-apple-darwin
             suffix: macos-x64
           - name: Linux x64
