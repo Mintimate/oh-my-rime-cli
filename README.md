@@ -62,10 +62,12 @@ flowchart TD
 ```
 
 ## 依赖说明
-- Go 1.24 及以上
-- Node.js 18+及npm (用于编译前端)
-- Wails v2: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
-- Windows 平台需支持 `golang.org/x/sys/windows/registry` 包
+
+桌面端使用 Tauri 2 + React + TypeScript + Rust，GUI 和独立 CLI 共用 Rust 更新核心。
+
+- Node.js 20+ 及 npm
+- Rust stable、Cargo，以及 Tauri 2 对应的平台构建依赖
+- macOS / Linux 需要系统 WebKit 构建依赖
 
 ## 下载与安装
 
@@ -75,12 +77,13 @@ flowchart TD
 
 - **GUI 版本**：
   - macOS：下载 `.dmg` 文件
-  - Windows：下载 `.exe` 安装包
+  - Windows：下载 `.msi` 或 `.exe` 安装包
+  - Linux：下载 `.deb`、`.rpm` 或 `.AppImage`
 
 - **CLI 版本**：
-  - Windows：下载 `oh-my-rime-cli-windows.exe`
-  - Linux：下载 `oh-my-rime-cli-linux`
-  - macOS：下载 `/oh-my-rime-cli-darwin`
+  - Windows：`cli-windows-x64.exe`
+  - Linux：`cli-linux-x64`
+  - macOS：`cli-macos-arm64` 或 `cli-macos-x64`
 
 ### 安全提示
 
@@ -99,42 +102,44 @@ Windows Defender 可能会误报为病毒。请确保从官方 GitHub Releases �
 
 ## 使用方法
 
-### 1. 编译 (Wails)
+### 1. 编译（Tauri 2）
 
-本项目 GUI 基于 Wails 开发，请确保已安装 Wails CLI。
+新桌面端位于 `src/` 与 `src-tauri/`，下载、备份、解压和平台路径等核心逻辑位于 `src-tauri/src/rime_core.rs`，GUI 与 Rust CLI 共用同一套更新核心。
 
-#### Windows
-在 Windows 下编译：
 ```sh
-cd oh-my-rime-cli
-wails build -upx
-# 编译后的文件将生成在 build/bin/ 目录下
+npm install
+npm run dev        # 开发模式
+npm run build      # 构建桌面应用
+npm run build:web  # 只构建前端
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-#### macOS/Linux
-在 macOS 或 Linux 下编译：
+macOS 下如果只需要验证应用 Bundle，可以运行：
+
 ```sh
-cd oh-my-rime-cli
-wails build
-# macOS 将在 build/bin/ 下生成 .app 应用程序
+npx tauri build --bundles app
 ```
 
-#### 交叉编译 Windows 版本
-在 macOS/Linux 下编译 Windows 可执行文件：
-```sh
-GOOS=windows GOARCH=amd64 go build -o oh-my-rime-cli.exe .
-```
+DMG、Windows 安装包和 Linux 安装包需要在对应平台的 CI 或本机完整构建环境中生成。
 
 ### 2. 运行
 
-双击或命令行运行编译后的程序，根据提示选择操作和配置目录。
+双击 Tauri 构建产物启动 GUI，选择 Rime 目标目录后执行更新。也可以运行新的共享核心 CLI：
+
+```sh
+cargo run --manifest-path src-tauri/Cargo.toml --bin oh-my-rime-cli
+```
+
+更新会先下载到临时文件并创建备份；失败时会尝试恢复更新前的目录。更新成功后，请使用对应输入法的“重新部署”功能使更改生效。
 
 ## 部分逻辑
 
-### Windows 注册表支持
-- Windows 下会自动读取注册表 `HKEY_CURRENT_USER\Software\Rime\Weasel` 的 `RimeUserDir` 字段
-- 若注册表不存在或读取失败，自动回退到 `%APPDATA%\Rime` 目录
+### 平台目录检测
 
+- Windows 优先读取 `HKEY_CURRENT_USER\Software\Rime\Weasel` 的 `RimeUserDir`
+- Windows 注册表读取失败时回退到 `%APPDATA%\Rime`
+- macOS 支持鼠须管和 Fcitx5
+- Linux 支持 iBus、Fcitx5 和 Fcitx5 Flatpak
 
 ## 贡献与许可
 - MIT License

@@ -2,12 +2,11 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag, for example v2.0.1"
+        description: "Release tag, for example v2.1.0"
         required: true
         type: string
 
@@ -15,9 +14,7 @@ permissions:
   contents: write
 
 env:
-  GO_VERSION: "1.23.4"
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   test:
@@ -25,242 +22,137 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-node@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Install GUI build dependencies
+          node-version: 20
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Install Linux WebKit dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build:web
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
 
-      - name: Setup dummy frontend for testing
-        run: mkdir -p frontend/dist && touch frontend/dist/index.html
-
-      - name: Run tests
-        run: go test -vet=off ./...
-
-  build-cli:
-    name: CLI ${{ matrix.name }}
+  build-app:
+    name: ${{ matrix.name }}
     needs: test
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - goos: darwin
-            goarch: amd64
-            name: darwin-amd64
-          - goos: darwin
-            goarch: arm64
-            name: darwin-arm64
-          - goos: linux
-            goarch: amd64
-            name: linux-amd64
-          - goos: linux
-            goarch: arm64
-            name: linux-arm64
-          - goos: windows
-            goarch: amd64
-            name: windows-amd64
-            ext: .exe
+          - name: macOS Apple Silicon
+            runner: macos-14
+            args: --target aarch64-apple-darwin --bundles app,dmg
+            rust_target: aarch64-apple-darwin
+            asset_os: macOS
+            asset_arch: arm64
+          - name: macOS Intel
+            runner: macos-13
+            args: --target x86_64-apple-darwin --bundles app,dmg
+            rust_target: x86_64-apple-darwin
+            asset_os: macOS
+            asset_arch: x64
+          - name: Windows x64
+            runner: windows-latest
+            args: --bundles msi,nsis
+            rust_target: ""
+            asset_os: Windows
+            asset_arch: x64
+          - name: Linux x64
+            runner: ubuntu-22.04
+            args: --bundles deb,rpm,appimage
+            rust_target: ""
+            asset_os: Linux
+            asset_arch: x64
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-node@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Build CLI
+          node-version: 20
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+      - name: Install Linux dependencies
+        if: startsWith(matrix.runner, 'ubuntu-')
         run: |
-          mkdir -p dist
-          mkdir -p frontend/dist && touch frontend/dist/index.html
-          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -ldflags="-s -w -X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" \
-            -o dist/oh-my-rime-cli-${{ env.RELEASE_TAG }}-${{ matrix.name }}${{ matrix.ext }} ./cmd/cli
-
-      - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+      - run: npm ci
+      - name: Build and upload Tauri bundles
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: cli-${{ matrix.name }}
-          path: dist/*
-          if-no-files-found: error
+          tauriScript: npm run tauri
+          args: ${{ matrix.args }}
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: Oh My Rime ${{ env.RELEASE_TAG }}
+          releaseDraft: true
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          releaseBody: "See the generated release notes for changes in this version."
+          releaseAssetNamePattern: Oh-My-Rime_[version]_${{ matrix.asset_os }}_${{ matrix.asset_arch }}[setup][ext]
 
-  build-macos-app:
-    name: macOS App ${{ matrix.arch }}
+  build-cli:
+    name: CLI ${{ matrix.name }}
     needs: test
-    runs-on: macos-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64]
+        include:
+          - name: macOS arm64
+            runner: macos-14
+            target: aarch64-apple-darwin
+            suffix: macos-arm64
+          - name: macOS x64
+            runner: macos-13
+            target: x86_64-apple-darwin
+            suffix: macos-x64
+          - name: Linux x64
+            runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            suffix: linux-x64
+          - name: Windows x64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            suffix: windows-x64.exe
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Build macOS GUI
-        run: |
-          mkdir -p dist
-          wails build -platform darwin/${{ matrix.arch }} -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -clean
-          mv "build/bin/oh-my-rime-cli.app" "build/bin/Oh My Rime.app"
-
-      - name: Sign app bundle
-        run: |
-          codesign --force --deep --sign - "build/bin/Oh My Rime.app"
-          codesign --verify --verbose "build/bin/Oh My Rime.app"
-          xattr -cr "build/bin/Oh My Rime.app"
-
-      - name: Create DMG
-        run: |
-          DMG_NAME="Oh-My-Rime-${RELEASE_TAG}-macos-${{ matrix.arch }}.dmg"
-          TEMP_DIR="dmg-temp-${{ matrix.arch }}"
-          mkdir -p "$TEMP_DIR"
-          cp -R "build/bin/Oh My Rime.app" "$TEMP_DIR/"
-          ln -s /Applications "$TEMP_DIR/Applications"
-          hdiutil create -srcfolder "$TEMP_DIR" -volname "Oh My Rime" \
-            -format UDZO -imagekey zlib-level=9 "dist/$DMG_NAME"
-
-      - name: Upload macOS app artifact
-        uses: actions/upload-artifact@v4
+          targets: ${{ matrix.target }}
+      - name: Build CLI
+        shell: bash
+        run: cargo build --manifest-path src-tauri/Cargo.toml --release --target ${{ matrix.target }} --bin oh-my-rime-cli
+      - uses: actions/upload-artifact@v4
         with:
-          name: macos-app-${{ matrix.arch }}
-          path: dist/*.dmg
-          if-no-files-found: error
+          name: cli-${{ matrix.suffix }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/oh-my-rime-cli*
 
-  build-windows-app:
-    name: Windows App amd64
-    needs: test
+  publish:
+    name: Publish release
+    needs: [build-app, build-cli]
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/download-artifact@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Install Windows build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-mingw-w64 zip
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Build Windows GUI and CLI
-        run: |
-          mkdir -p dist/windows
-
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
-            go build -ldflags="-s -w -X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -o dist/windows/oh-my-rime-cli.exe ./cmd/cli
-
-          wails build -platform windows/amd64 -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -clean
-          cp build/bin/oh-my-rime-gui.exe dist/windows/
-
-          cp README.md LICENSE dist/windows/
-
-          cat > dist/windows/start-gui.bat << 'EOF'
-          @echo off
-          start "" "%~dp0oh-my-rime-gui.exe"
-          EOF
-
-          cat > dist/windows/start-cli.bat << 'EOF'
-          @echo off
-          chcp 65001 > nul
-          "%~dp0oh-my-rime-cli.exe"
-          pause
-          EOF
-
-          cd dist/windows
-          zip -r "../Oh-My-Rime-${RELEASE_TAG}-windows-amd64.zip" .
-
-      - name: Upload Windows app artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-app-amd64
-          path: dist/*.zip
-          if-no-files-found: error
-
-  build-linux-app:
-    name: Linux App amd64
-    needs: test
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Install Linux GUI build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Build Linux GUI and CLI
-        run: |
-          mkdir -p dist/linux
-          wails build -platform linux/amd64 -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -clean
-          cp build/bin/oh-my-rime-gui dist/linux/
-
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-            go build -ldflags="-s -w -X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -o dist/linux/oh-my-rime-cli ./cmd/cli
-          cp README.md LICENSE dist/linux/
-          tar -C dist -czf "dist/Oh-My-Rime-${RELEASE_TAG}-linux-amd64.tar.gz" linux
-
-      - name: Upload Linux app artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-app-amd64
-          path: dist/*.tar.gz
-          if-no-files-found: error
-
-  publish-release:
-    name: Publish GitHub Release
-    needs:
-      - build-cli
-      - build-macos-app
-      - build-windows-app
-      - build-linux-app
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release-assets
+          path: cli
+          pattern: cli-*
           merge-multiple: true
-
-      - name: List release assets
-        run: ls -lh release-assets
-
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: Oh My Rime ${{ env.RELEASE_TAG }}
-          generate_release_notes: true
-          files: release-assets/*
-          fail_on_unmatched_files: true
-          draft: false
-          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+      - name: Upload CLI assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${RELEASE_TAG}" cli/* --clobber
+      - name: Publish draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${RELEASE_TAG}" --draft=false

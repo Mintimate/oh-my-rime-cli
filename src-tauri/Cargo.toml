@@ -1,0 +1,38 @@
+[package]
+name = "oh-my-rime"
+version = "2.1.0"
+description = "Oh My Rime desktop configuration manager"
+authors = ["Mintimate"]
+edition = "2021"
+license = "MIT"
+
+[lib]
+name = "oh_my_rime_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "oh-my-rime"
+path = "src/main.rs"
+
+[[bin]]
+name = "oh-my-rime-cli"
+path = "src/bin/oh-my-rime-cli.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+chrono = { version = "0.4", features = ["clock"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls", "system-proxy"] }
+rfd = { version = "0.16", default-features = false, features = ["xdg-portal"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2.11.3", features = [] }
+tempfile = "3"
+zip = "2.4"
+
+[dev-dependencies]
+tempfile = "3"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"

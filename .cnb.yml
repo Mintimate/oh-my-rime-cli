@@ -12,42 +12,24 @@
         force: true
         push_tags: true
 
-# 2. 触发分支 push 事件（同步 main 分支的 commit）
 main:
   push:
     - *sync_pipeline
 
-
 $:
   tag_push:
     - *sync_pipeline
-    # 上传二进制包到 release 附件
-    - name: "发布新版本"
+    - name: 测试 Web 与 Rust 核心
       docker:
-        build: .ide/Dockerfile
-        volumes:
-          - /root/go/pkg/mod
-          - /root/.cache/go-build
+        image: rust:1.88-bookworm
       stages:
-        - name: 更新日志
-          image: cnbcool/changelog
-          exports:
-            latestChangeLog: LATEST_CHANGE_LOG
-        - name: 创建 release
-          type: git:release
-          options:
-            latest: true
-            description: ${LATEST_CHANGE_LOG}
-        - name: 依赖安装和部署
-          script: zsh script/build.sh
-        - name: release 上传附件
-          image: cnbcool/attachments:latest
-          settings:
-            attachments:
-              - dist/linux/oh-my-rime-*
-              - dist/windows/oh-my-rime-*.exe
-              - dist/macos/oh-my-rime-*
-          exports:
-            FILES: FILES
-        - name: 输出附件
-          script: echo $FILES
+        - name: 安装 Node.js
+          script: |
+            apt-get update && apt-get install -y nodejs npm libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
+        - name: 安装依赖并测试
+          script: |
+            npm ci
+            npm run typecheck
+            npm run build:web
+            cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+            cargo test --manifest-path src-tauri/Cargo.toml
