@@ -2,9 +2,9 @@ name: Test Build
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, rust-ui]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, rust-ui]
 
 jobs:
   test:
