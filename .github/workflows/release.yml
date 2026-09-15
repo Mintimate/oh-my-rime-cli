@@ -129,6 +129,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      - name: Install Linux CLI build dependencies
+        if: startsWith(matrix.runner, 'ubuntu-')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev pkg-config
       - name: Build CLI
         shell: bash
         run: cargo build --manifest-path src-tauri/Cargo.toml --release --target ${{ matrix.target }} --bin oh-my-rime-cli
