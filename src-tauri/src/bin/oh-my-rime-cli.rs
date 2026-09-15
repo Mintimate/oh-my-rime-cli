@@ -1,4 +1,7 @@
-use oh_my_rime_lib::rime_core::{self, Action, UpdateProgress};
+#[path = "../rime_core.rs"]
+mod rime_core;
+
+use rime_core::{Action, UpdateProgress};
 use std::io::{self, Write};
 
 fn main() {
