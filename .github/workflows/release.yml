@@ -90,6 +90,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
       - run: npm ci
+      - name: Sign bundled macOS CLI binary
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cargo build --manifest-path src-tauri/Cargo.toml --release \
+            --target "${{ matrix.rust_target }}" --bin oh-my-rime-cli
+          codesign --force --sign - \
+            "src-tauri/target/${{ matrix.rust_target }}/release/oh-my-rime-cli"
       - name: Build and upload Tauri bundles
         uses: tauri-apps/tauri-action@v1
         env:
