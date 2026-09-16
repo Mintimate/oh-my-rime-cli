@@ -64,31 +64,38 @@ jobs:
           test "$(git rev-list -n 1 "${RELEASE_TAG}")" = "${GITHUB_SHA}"
           echo "app_version=$(jq -r '.version' src-tauri/tauri.conf.json)" >> "${GITHUB_OUTPUT}"
 
-          if draft="$(gh release view "${RELEASE_TAG}" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
-            if [[ "${draft}" != true ]]; then
-              echo "::error::Release ${RELEASE_TAG} is already public; refusing to overwrite it."
-              exit 1
-            fi
-          else
-            flags=()
+          release_pages="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+          release_count="$(jq --arg tag "${RELEASE_TAG}" '[.[][] | select(.tag_name == $tag)] | length' <<<"${release_pages}")"
+          if [[ "${release_count}" -eq 0 ]]; then
+            prerelease=false
             if [[ "${RELEASE_TAG}" == *-* ]]; then
-              flags+=(--prerelease)
+              prerelease=true
             fi
             cat > "${RUNNER_TEMP}/release-notes.md" <<'NOTES'
           macOS 安装包使用 ad-hoc 签名，未经过 Apple 公证。首次打开若提示“Apple 无法验证”，请在确认来源后到“系统设置 → 隐私与安全 → 仍要打开”确认。
 
           GUI 安装包与独立 CLI 按平台分别提供。应用自动更新功能尚未启用。
           NOTES
-            gh release create "${RELEASE_TAG}" --verify-tag --draft \
-              --title "Oh My Rime ${RELEASE_TAG}" \
-              --notes-file "${RUNNER_TEMP}/release-notes.md" "${flags[@]}"
+            release_json="$(jq -n \
+              --arg tag "${RELEASE_TAG}" \
+              --arg name "Oh My Rime ${RELEASE_TAG}" \
+              --arg target "${GITHUB_SHA}" \
+              --rawfile body "${RUNNER_TEMP}/release-notes.md" \
+              --argjson prerelease "${prerelease}" \
+              '{tag_name: $tag, name: $name, target_commitish: $target, body: $body, draft: true, prerelease: $prerelease}' |
+              gh api --method POST "repos/${GITHUB_REPOSITORY}/releases" --input -)"
+          elif [[ "${release_count}" -eq 1 ]]; then
+            release_json="$(jq -c --arg tag "${RELEASE_TAG}" '.[][] | select(.tag_name == $tag)' <<<"${release_pages}")"
+          else
+            echo "::error::Multiple releases found for ${RELEASE_TAG}"
+            exit 1
           fi
 
-          release_id="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" |
-            jq -er --arg tag "${RELEASE_TAG}" '
-              [.[][] | select(.tag_name == $tag and .draft == true)]
-              | if length == 1 then .[0].id else error("Expected one draft release") end
-            ')"
+          # Use the POST response immediately; the release list can lag behind creation.
+          release_id="$(jq -er --arg tag "${RELEASE_TAG}" '
+            if .tag_name == $tag and .draft == true then .id
+            else error("Expected a matching draft release; refusing to overwrite a public release") end
+          ' <<<"${release_json}")"
           echo "release_id=${release_id}" >> "${GITHUB_OUTPUT}"
 
   build-app:
