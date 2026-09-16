@@ -89,13 +89,14 @@ flowchart TD
 
 ⚠️ **重要提醒**：由于项目由开源社区维护，未购买并进行 Apple Developer / Windows 签名，可能被识别为未知来源程序。
 
-**对于 macOS 用户 (Gatekeeper 绕过指南):**
-打开 DMG 安装包或应用程序时可能会提示“已损坏，无法打开”或“无法验证开发者”。请使用以下两种方法之一绕过拦截：
-1. **(推荐) 彻底清理隔离属性**：将应用拖入 `应用程序 (Applications)` 文件夹后，打开终端，执行以下命令即可一劳永逸：
-   ```sh
-   xattr -cr /Applications/Oh\ My\ Rime.app
-   ```
-2. **右键打开法**：将应用拖入 `应用程序` 文件夹后，**不要双击**，而是对着 `Oh My Rime.app` **右键 -> 打开**。在弹出的警告框中会多出一个“打开”按钮，点击即可。
+**对于 macOS 用户：**
+
+发布包使用 ad-hoc 签名校验应用完整性，尚未使用 Developer ID 证书或通过 Apple 公证。首次打开从浏览器下载的应用时，仍可能提示“Apple 无法验证”或“无法验证开发者”。确认下载来源后：
+
+1. 将 `Oh My Rime.app` 拖入“应用程序”文件夹，尝试打开一次，在提示中点击“完成”。
+2. 打开 **系统设置 → 隐私与安全**，在“安全性”区域找到 Oh My Rime，点击 **仍要打开**，按系统提示确认。
+
+这是首次运行的信任确认。若提示“已损坏”，应重新下载并检查签名，不要将它与未公证提示混为一谈。详见 [Apple 官方说明](https://support.apple.com/zh-cn/102445)。
 
 **对于 Windows 用户:**
 Windows Defender 可能会误报为病毒。请确保从官方 GitHub Releases 页面下载，并在杀毒软件中将其添加为信任/白名单。
@@ -127,7 +128,7 @@ DMG、Windows 安装包和 Linux 安装包需要在对应平台的 CI 或本机�
 双击 Tauri 构建产物启动 GUI，选择 Rime 目标目录后执行更新。也可以运行新的共享核心 CLI：
 
 ```sh
-cargo run --manifest-path src-tauri/Cargo.toml --bin oh-my-rime-cli
+cargo run --manifest-path src-tauri/Cargo.toml --features cli --bin oh-my-rime-cli
 ```
 
 更新会先下载到临时文件并创建备份；失败时会尝试恢复更新前的目录。更新成功后，请使用对应输入法的“重新部署”功能使更改生效。

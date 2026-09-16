@@ -26,5 +26,5 @@ jobs:
       - run: npm run typecheck
       - run: npm run build:web
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-      - run: cargo test --manifest-path src-tauri/Cargo.toml
-      - run: cargo build --manifest-path src-tauri/Cargo.toml --release --bin oh-my-rime-cli
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --features cli
+      - run: cargo build --manifest-path src-tauri/Cargo.toml --release --features cli --bin oh-my-rime-cli

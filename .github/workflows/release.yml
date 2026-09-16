@@ -15,6 +15,11 @@ permissions:
 
 env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  GH_REPO: ${{ github.repository }}
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -37,11 +42,58 @@ jobs:
       - run: npm run typecheck
       - run: npm run build:web
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-      - run: cargo test --manifest-path src-tauri/Cargo.toml
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --features cli
+
+  prepare:
+    name: Prepare draft release
+    needs: test
+    runs-on: ubuntu-22.04
+    outputs:
+      release_id: ${{ steps.release.outputs.release_id }}
+      app_version: ${{ steps.release.outputs.app_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create or reuse one draft release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          test "$(git rev-list -n 1 "${RELEASE_TAG}")" = "${GITHUB_SHA}"
+          echo "app_version=$(jq -r '.version' src-tauri/tauri.conf.json)" >> "${GITHUB_OUTPUT}"
+
+          if draft="$(gh release view "${RELEASE_TAG}" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
+            if [[ "${draft}" != true ]]; then
+              echo "::error::Release ${RELEASE_TAG} is already public; refusing to overwrite it."
+              exit 1
+            fi
+          else
+            flags=()
+            if [[ "${RELEASE_TAG}" == *-* ]]; then
+              flags+=(--prerelease)
+            fi
+            cat > "${RUNNER_TEMP}/release-notes.md" <<'NOTES'
+          macOS 安装包使用 ad-hoc 签名，未经过 Apple 公证。首次打开若提示“Apple 无法验证”，请在确认来源后到“系统设置 → 隐私与安全 → 仍要打开”确认。
+
+          GUI 安装包与独立 CLI 按平台分别提供。应用自动更新功能尚未启用。
+          NOTES
+            gh release create "${RELEASE_TAG}" --verify-tag --draft \
+              --title "Oh My Rime ${RELEASE_TAG}" \
+              --notes-file "${RUNNER_TEMP}/release-notes.md" "${flags[@]}"
+          fi
+
+          release_id="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" |
+            jq -er --arg tag "${RELEASE_TAG}" '
+              [.[][] | select(.tag_name == $tag and .draft == true)]
+              | if length == 1 then .[0].id else error("Expected one draft release") end
+            ')"
+          echo "release_id=${release_id}" >> "${GITHUB_OUTPUT}"
 
   build-app:
     name: ${{ matrix.name }}
-    needs: test
+    needs: prepare
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -90,14 +142,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
       - run: npm ci
-      - name: Sign bundled macOS CLI binary
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          cargo build --manifest-path src-tauri/Cargo.toml --release \
-            --target "${{ matrix.rust_target }}" --bin oh-my-rime-cli
-          codesign --force --sign - \
-            "src-tauri/target/${{ matrix.rust_target }}/release/oh-my-rime-cli"
       - name: Build and upload Tauri bundles
         uses: tauri-apps/tauri-action@v1
         env:
@@ -107,11 +151,12 @@ jobs:
         with:
           tauriScript: npm run tauri
           args: ${{ matrix.args }}
+          releaseId: ${{ needs.prepare.outputs.release_id }}
           tagName: ${{ env.RELEASE_TAG }}
           releaseName: Oh My Rime ${{ env.RELEASE_TAG }}
           releaseDraft: true
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
-          releaseBody: "See the generated release notes for changes in this version."
+          uploadUpdaterJson: false
           releaseAssetNamePattern: Oh-My-Rime_[version]_${{ matrix.asset_os }}_${{ matrix.asset_arch }}[setup][ext]
 
       - name: Verify macOS app signature
@@ -119,6 +164,7 @@ jobs:
         shell: bash
         run: |
           app_path="src-tauri/target/${{ matrix.rust_target }}/release/bundle/macos/Oh My Rime.app"
+          test ! -e "$app_path/Contents/MacOS/oh-my-rime-cli"
           codesign --verify --deep --strict --verbose=2 "$app_path"
           codesign --display --verbose=4 "$app_path"
 
@@ -158,16 +204,27 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev pkg-config
       - name: Build CLI
         shell: bash
-        run: cargo build --manifest-path src-tauri/Cargo.toml --release --target ${{ matrix.target }} --bin oh-my-rime-cli
+        run: |
+          cargo build --manifest-path src-tauri/Cargo.toml --release \
+            --target "${{ matrix.target }}" --features cli --bin oh-my-rime-cli
+          cli_path="src-tauri/target/${{ matrix.target }}/release/oh-my-rime-cli"
+          if [[ "${RUNNER_OS}" == Windows ]]; then
+            cli_path="${cli_path}.exe"
+          elif [[ "${RUNNER_OS}" == macOS ]]; then
+            codesign --force --sign - "${cli_path}"
+            codesign --verify --strict --verbose=2 "${cli_path}"
+          fi
+          mkdir -p release-assets
+          cp "${cli_path}" "release-assets/cli-${{ matrix.suffix }}"
       - uses: actions/upload-artifact@v4
         with:
           name: cli-${{ matrix.suffix }}
-          path: |
-            src-tauri/target/${{ matrix.target }}/release/oh-my-rime-cli*
+          path: release-assets/cli-${{ matrix.suffix }}
+          if-no-files-found: error
 
   publish:
     name: Publish release
-    needs: [build-app, build-cli]
+    needs: [prepare, build-app, build-cli]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v4
@@ -182,4 +239,28 @@ jobs:
       - name: Publish draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "${RELEASE_TAG}" --draft=false
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+          APP_VERSION: ${{ needs.prepare.outputs.app_version }}
+        shell: bash
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" > release.json
+          jq -e --arg tag "${RELEASE_TAG}" '.tag_name == $tag and .draft == true' release.json
+          required_assets=(
+            "Oh-My-Rime_${APP_VERSION}_macOS_arm64.dmg"
+            "Oh-My-Rime_${APP_VERSION}_macOS_x64.dmg"
+            "Oh-My-Rime_${APP_VERSION}_macOS_arm64.app.tar.gz"
+            "Oh-My-Rime_${APP_VERSION}_macOS_x64.app.tar.gz"
+            "Oh-My-Rime_${APP_VERSION}_Windows_x64-setup.exe"
+            "Oh-My-Rime_${APP_VERSION}_Windows_x64.msi"
+            "Oh-My-Rime_${APP_VERSION}_Linux_x64.AppImage"
+            "Oh-My-Rime_${APP_VERSION}_Linux_x64.deb"
+            "Oh-My-Rime_${APP_VERSION}_Linux_x64.rpm"
+            cli-macos-arm64 cli-macos-x64 cli-linux-x64 cli-windows-x64.exe
+          )
+          for asset in "${required_assets[@]}"; do
+            jq -e --arg name "${asset}" '
+              [.assets[] | select(.name == $name and .state == "uploaded" and .size > 0)]
+              | length == 1
+            ' release.json > /dev/null || { echo "::error::Missing asset ${asset}"; exit 1; }
+          done
+          gh release edit "${RELEASE_TAG}" --draft=false --latest=false

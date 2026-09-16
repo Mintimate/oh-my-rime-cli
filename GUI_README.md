@@ -33,6 +33,14 @@ macOS 上只验证应用 Bundle：
 npx tauri build --bundles app
 ```
 
+GUI 安装包只包含桌面程序；独立 CLI 通过 `cli` Cargo feature 单独构建。macOS 本地打包如需与 CI 使用相同的 ad-hoc 签名：
+
+```bash
+APPLE_SIGNING_IDENTITY=- npm run build -- --bundles app,dmg
+```
+
+ad-hoc 签名不包含 Apple 公证。首次打开下载的应用时，如提示“Apple 无法验证”，请确认来源后到“系统设置 → 隐私与安全 → 仍要打开”确认。后续应用自动更新的产物签名需要单独配置，不能代替 macOS 签名和公证。
+
 ## 更新流程
 
 1. 选择 Rime 目标目录。
@@ -48,5 +56,5 @@ npx tauri build --bundles app
 GUI 和 CLI 共用同一个 Rust 更新核心：
 
 ```bash
-cargo run --manifest-path src-tauri/Cargo.toml --bin oh-my-rime-cli
+cargo run --manifest-path src-tauri/Cargo.toml --features cli --bin oh-my-rime-cli
 ```

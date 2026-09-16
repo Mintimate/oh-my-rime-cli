@@ -17,6 +17,12 @@ path = "src/main.rs"
 [[bin]]
 name = "oh-my-rime-cli"
 path = "src/bin/oh-my-rime-cli.rs"
+required-features = ["cli"]
+
+[features]
+# The desktop installer bundles only the GUI executable. Build the standalone
+# CLI explicitly with --features cli, like the separate CLI release jobs.
+cli = []
 
 [build-dependencies]
 tauri-build = { version = "2.5.6", features = [] }

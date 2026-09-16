@@ -39,7 +39,7 @@ The Rust update core is located at `src-tauri/src/rime_core.rs`.
 Run the standalone CLI with:
 
 ```bash
-cargo run --manifest-path src-tauri/Cargo.toml --bin oh-my-rime-cli
+cargo run --manifest-path src-tauri/Cargo.toml --features cli --bin oh-my-rime-cli
 ```
 
 ## Build outputs
@@ -51,6 +51,10 @@ npx tauri build --bundles app
 ```
 
 DMG, Windows installers, and Linux packages are produced by the platform-specific release workflow.
+
+The desktop installer contains the GUI executable only. The standalone CLI is built separately with the `cli` Cargo feature and published under platform-specific names.
+
+macOS release bundles are ad-hoc signed but are not Apple-notarized. After copying the app to Applications and attempting to open it, confirm its source and use **System Settings → Privacy & Security → Open Anyway** if Apple cannot verify it. See [Apple's instructions](https://support.apple.com/en-us/102445). A damaged-app warning is a separate integrity problem; redownload and verify the signature in that case.
 
 After an update, use the reload/redeploy action provided by your Rime input method so the new configuration takes effect.
 
