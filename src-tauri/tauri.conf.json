@@ -39,7 +39,8 @@
     ],
     "macOS": {
       "signingIdentity": "-"
-    }
+    },
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "updater": {

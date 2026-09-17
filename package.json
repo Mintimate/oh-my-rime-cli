@@ -9,6 +9,8 @@
     "build:web": "tsc --noEmit && vite build",
     "build": "tauri build",
     "typecheck": "tsc --noEmit",
+    "bump": "node script/bump-version.mjs",
+    "test:release": "node --test .github/scripts/*.test.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "tauri": "tauri"
   },
