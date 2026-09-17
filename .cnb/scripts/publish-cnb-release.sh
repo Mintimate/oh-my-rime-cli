@@ -9,6 +9,9 @@ set -euo pipefail
 : "${GITHUB_RELEASE_METADATA_FILE:?GITHUB_RELEASE_METADATA_FILE is required}"
 
 release_tag="${RELEASE_TAG#refs/tags/}"
+if [[ "${CNB_EVENT:-}" == web_trigger || "${CNB_EVENT:-}" == api_trigger ]]; then
+  release_tag="v$(node -p 'require("./src-tauri/tauri.conf.json").version')"
+fi
 release_name="$(jq -r '.name // .tag_name' "${GITHUB_RELEASE_METADATA_FILE}")"
 release_prerelease="$(jq -r '.prerelease // false' "${GITHUB_RELEASE_METADATA_FILE}")"
 release_body="$(jq -r '.body // ""' "${GITHUB_RELEASE_METADATA_FILE}")"
@@ -69,7 +72,6 @@ release_response="$(
 
 if [[ "$(response_status "${release_response}")" == "200" ]]; then
   release_id="$(jq -r '.data.id' <<<"${release_response}")"
-  existing_assets="$(jq -c '.data.assets // []' <<<"${release_response}")"
   update_payload="$(jq -cn \
     --arg name "${release_name}" \
     --arg body "${release_body}" \
@@ -100,7 +102,6 @@ else
   )"
   require_status "${create_response}" 201
   release_id="$(jq -r '.data.id' <<<"${create_response}")"
-  existing_assets="[]"
 fi
 
 shopt -s nullglob
@@ -157,21 +158,10 @@ for asset in "${assets[@]}"; do
   echo "Uploaded ${asset_name} to CNB Release ${release_tag}"
 done
 
-final_response="$(
-  cnb_cli releases get-release-by-tag \
-    --repo "${TARGET_CNB_REPO}" \
-    --tag "${release_tag}" \
-    --verbose
-)"
-require_status "${final_response}" 200
-
-for asset in "${assets[@]}"; do
-  name="$(basename "$asset")"
-  size="$(wc -c <"$asset" | tr -d '[:space:]')"
-  jq -e --arg name "$name" --argjson size "$size" '
-    [.data.assets[] | select(.name == $name and .size == $size)] | length == 1
-  ' <<<"$final_response" > /dev/null || { echo "Missing or incomplete CNB asset: $name" >&2; exit 1; }
-done
+# Release details may omit assets that are independently downloadable.
+# Verify every expected file against its actual bytes, including latest.json.
+node .cnb/scripts/verify-release-assets.mjs \
+  "$TARGET_CNB_REPO" "$release_tag" "$RELEASE_ASSETS_DIR"
 publish_payload="$(jq -cn --arg make_latest "$release_make_latest" --argjson prerelease "$release_prerelease" \
   '{draft: false, prerelease: $prerelease, make_latest: $make_latest}')"
 publish_response="$(cnb_cli releases patch-release --repo "$TARGET_CNB_REPO" \

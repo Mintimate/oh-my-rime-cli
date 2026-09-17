@@ -8,6 +8,9 @@ set -euo pipefail
 : "${GITHUB_RELEASE_METADATA_FILE:?}"
 
 release_tag="${RELEASE_TAG#refs/tags/}"
+if [[ "${CNB_EVENT:-}" == web_trigger || "${CNB_EVENT:-}" == api_trigger ]]; then
+  release_tag="v$(node -p 'require("./src-tauri/tauri.conf.json").version')"
+fi
 [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || exit 1
 wait_seconds="${GITHUB_RELEASE_WAIT_SECONDS:-900}"
 poll_seconds="${GITHUB_RELEASE_POLL_SECONDS:-15}"

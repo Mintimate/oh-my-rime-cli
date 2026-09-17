@@ -1,35 +1,42 @@
+.release_mirror: &release_mirror
+  name: 从 GitHub 镜像版本发布
+  runner:
+    cpus: 2
+  docker:
+    build:
+      dockerfile: .cnb/Dockerfile
+      by:
+        - .cnb/Dockerfile
+      versionBy:
+        - .cnb/Dockerfile
+  git:
+    enable: true
+  lock:
+    key: oh-my-rime-release-mirror
+    wait: true
+  env:
+    GITHUB_REPOSITORY_SLUG: Mintimate/oh-my-rime-cli
+    TARGET_CNB_REPO: ${CNB_REPO_SLUG}
+    RELEASE_TAG: ${CNB_BRANCH}
+    RELEASE_ASSETS_DIR: ${CNB_BUILD_WORKSPACE}/.cnb-release-assets
+    GITHUB_RELEASE_METADATA_FILE: ${CNB_BUILD_WORKSPACE}/.github-release.json
+    GITHUB_RELEASE_WAIT_SECONDS: "900"
+    GITHUB_RELEASE_POLL_SECONDS: "15"
+  stages:
+    - name: 从 GitHub 拉取 Release
+      timeout: 20m
+      if: 'test "${CNB_EVENT}" != "tag_push" || printf "%s\n" "${CNB_BRANCH}" | grep -Eq "^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$"'
+      script: bash .cnb/scripts/pull-github-release.sh
+
+    - name: 创建 CNB Release 并上传附件
+      timeout: 30m
+      if: 'test "${CNB_EVENT}" != "tag_push" || printf "%s\n" "${CNB_BRANCH}" | grep -Eq "^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$"'
+      script: bash .cnb/scripts/publish-cnb-release.sh
+
 "$":
   tag_push:
-    - name: 从 GitHub 镜像版本发布
-      runner:
-        cpus: 2
-      docker:
-        build:
-          dockerfile: .cnb/Dockerfile
-          by:
-            - .cnb/Dockerfile
-          versionBy:
-            - .cnb/Dockerfile
-      git:
-        enable: true
-      lock:
-        key: oh-my-rime-release-mirror
-        wait: true
-      env:
-        GITHUB_REPOSITORY_SLUG: Mintimate/oh-my-rime-cli
-        TARGET_CNB_REPO: ${CNB_REPO_SLUG}
-        RELEASE_TAG: ${CNB_BRANCH}
-        RELEASE_ASSETS_DIR: ${CNB_BUILD_WORKSPACE}/.cnb-release-assets
-        GITHUB_RELEASE_METADATA_FILE: ${CNB_BUILD_WORKSPACE}/.github-release.json
-        GITHUB_RELEASE_WAIT_SECONDS: "900"
-        GITHUB_RELEASE_POLL_SECONDS: "15"
-      stages:
-        - name: 从 GitHub 拉取 Release
-          timeout: 20m
-          if: 'printf "%s\n" "${CNB_BRANCH}" | grep -Eq "^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$"'
-          script: bash .cnb/scripts/pull-github-release.sh
-
-        - name: 创建 CNB Release 并上传附件
-          timeout: 30m
-          if: 'printf "%s\n" "${CNB_BRANCH}" | grep -Eq "^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$"'
-          script: bash .cnb/scripts/publish-cnb-release.sh
+    - *release_mirror
+  web_trigger:
+    - *release_mirror
+  api_trigger:
+    - *release_mirror

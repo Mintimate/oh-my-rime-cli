@@ -95,5 +95,7 @@ cargo run --manifest-path src-tauri/Cargo.toml --features cli --bin oh-my-rime-c
 - `Release` 工作流成功公开版本后，再同步该版本标签，触发 CNB 的 `.cnb.yml`。
 - CNB 拉取 21 个产物（安装包、4 个 CLI、7 个签名及更新清单），再次验签，改写清单下载地址，上传齐全后才公开 CNB Release。
 - GitHub 仓库需要 `CNB_GIT_PASSWORD` Actions Secret。CNB 构建使用平台提供的 `CNB_TOKEN` 上传附件，不需要复制 updater 私钥。
-- 同步采用普通推送，遇到 CNB 分支分叉或同名标签冲突会失败，不会强制覆盖历史。需要手动重试时，可重新运行 GitHub 同步工作流或 CNB 对应标签的构建。
+- 同步采用普通推送，遇到 CNB 分支分叉或同名标签冲突会失败，不会强制覆盖历史。
+- 附件上传后逐个通过下载接口验证 SHA-256，包括 `latest.json`；不依赖 Release 汇总接口的附件列表。短暂不可见会有限重试，校验失败仍保留草稿。
+- 如果镜像脚本在发布后修复，应在 CNB 选择 **main → 手动运行（web_trigger）**：使用 main 的新脚本恢复 `tauri.conf.json` 中当前版本的镜像，不修改公开标签。直接重跑旧标签仍会使用旧脚本。
 - 应用内更新目前从 GitHub 检查。CNB 镜像更新清单保留原签名，仅替换下载 URL。
