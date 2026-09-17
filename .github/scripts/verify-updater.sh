@@ -13,8 +13,10 @@ jq -r '.plugins.updater.pubkey' "$config" | base64 --decode > "$verification_dir
 jq -c '[.platforms[]] | unique_by(.url)[]' "$manifest" |
   while IFS= read -r entry; do
     url="$(jq -r '.url' <<<"$entry")"
-    api_url="$(jq -er --arg url "$url" '
-      [.assets[] | select(.browser_download_url == $url)]
+    # The manifest uses the final tag; draft browser URLs use untagged-*.
+    asset_name="${url##*/}"
+    api_url="$(jq -er --arg name "$asset_name" '
+      [.assets[] | select(.name == $name)]
       | if length == 1 then .[0].url else error("Expected one update asset") end
     ' "$release_json")"
     gh api -H 'Accept: application/octet-stream' "$api_url" > "$verification_dir/package"

@@ -83,6 +83,39 @@ test("缺少安装资产时拒绝生成清单", (t) => {
   );
 });
 
+test("草稿占位 URL 转换为正式标签 URL", (t) => {
+  const { directory, release } = createFixture();
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  release.draft = true;
+  for (const asset of release.assets) {
+    asset.browser_download_url = asset.browser_download_url.replace(
+      "/v1.2.3/",
+      "/untagged-956758b34bc613619b45/",
+    );
+  }
+  const manifest = generateUpdaterManifest({
+    version: "1.2.3",
+    tag: "v1.2.3",
+    release,
+    signatureDirectory: directory,
+  });
+  for (const entry of Object.values(manifest.platforms)) {
+    assert.ok(entry.url.includes("/download/v1.2.3/"));
+    assert.ok(!entry.url.includes("untagged-"));
+  }
+  release.draft = false;
+  assert.throws(
+    () =>
+      generateUpdaterManifest({
+        version: "1.2.3",
+        tag: "v1.2.3",
+        release,
+        signatureDirectory: directory,
+      }),
+    /下载地址不匹配/,
+  );
+});
+
 test("版本与标签不一致时拒绝生成清单", (t) => {
   const { directory, release } = createFixture();
   t.after(() => rmSync(directory, { recursive: true, force: true }));

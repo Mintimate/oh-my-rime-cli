@@ -69,10 +69,21 @@ function findUniqueAsset(release, expectedName) {
     throw new Error(`Release 资产 ${expectedName} 尚未完整上传`);
   }
   const expectedUrl = `https://github.com/Mintimate/oh-my-rime-cli/releases/download/${release.tag_name}/${expectedName}`;
-  if (asset.browser_download_url !== expectedUrl) {
+  const downloadUrl = new URL(asset.browser_download_url);
+  const draftPrefix = "/Mintimate/oh-my-rime-cli/releases/download/";
+  const draftTag = downloadUrl.pathname.slice(draftPrefix.length).split("/")[0];
+  const validDraftUrl =
+    release.draft === true &&
+    downloadUrl.origin === "https://github.com" &&
+    /^untagged-[a-f0-9]+$/.test(draftTag) &&
+    downloadUrl.pathname === `${draftPrefix}${draftTag}/${expectedName}` &&
+    !downloadUrl.search &&
+    !downloadUrl.hash;
+  if (asset.browser_download_url !== expectedUrl && !validDraftUrl) {
     throw new Error(`Release 资产 ${expectedName} 下载地址不匹配`);
   }
-  return asset;
+  // Draft downloads use a temporary tag. Clients need the post-publication URL.
+  return { ...asset, browser_download_url: expectedUrl };
 }
 
 export function expectedUpdaterAssetNames(version) {
