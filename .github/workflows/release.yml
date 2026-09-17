@@ -80,6 +80,9 @@ jobs:
 
           GUI 安装包与独立 CLI 按平台分别提供。桌面端支持签名自动更新，可在左下角检查更新；测试版需启用“接收测试版”。
           NOTES
+            if [[ -f "docs/release-notes/${RELEASE_TAG}.md" ]]; then
+              cp "docs/release-notes/${RELEASE_TAG}.md" "${RUNNER_TEMP}/release-notes.md"
+            fi
             release_json="$(jq -n \
               --arg tag "${RELEASE_TAG}" \
               --arg name "Oh My Rime ${RELEASE_TAG}" \
@@ -299,4 +302,8 @@ jobs:
               | length == 1
             ' release.json > /dev/null || { echo "::error::Missing asset ${asset}"; exit 1; }
           done
-          gh release edit "${RELEASE_TAG}" --draft=false --latest=false
+          if [[ "${RELEASE_TAG}" == *-* ]]; then
+            gh release edit "${RELEASE_TAG}" --draft=false --latest=false
+          else
+            gh release edit "${RELEASE_TAG}" --draft=false --latest
+          fi

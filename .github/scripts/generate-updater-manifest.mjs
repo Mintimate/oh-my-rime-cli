@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const TARGETS = [
+export const TARGETS = [
   {
     keys: ["darwin-aarch64", "darwin-aarch64-app"],
     os: "macOS",

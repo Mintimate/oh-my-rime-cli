@@ -23,3 +23,5 @@ dist/
 *.AppImage
 *.deb
 *.rpm
+.cnb-release-assets/
+.github-release.json
