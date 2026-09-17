@@ -33,13 +33,22 @@ macOS 上只验证应用 Bundle：
 npx tauri build --bundles app
 ```
 
-GUI 安装包只包含桌面程序；独立 CLI 通过 `cli` Cargo feature 单独构建。macOS 本地打包如需与 CI 使用相同的 ad-hoc 签名：
+GUI 安装包只包含桌面程序；独立 CLI 通过 `cli` Cargo feature 单独构建。macOS 已在 `src-tauri/tauri.conf.json` 中默认配置 ad-hoc 签名（`bundle.macOS.signingIdentity: "-"`），本地打包和 CI 使用相同方式，无需提供签名密钥：
 
 ```bash
-APPLE_SIGNING_IDENTITY=- npm run build -- --bundles app,dmg
+npm run build -- --bundles app,dmg
 ```
 
-ad-hoc 签名不包含 Apple 公证。首次打开下载的应用时，如提示“Apple 无法验证”，请确认来源后到“系统设置 → 隐私与安全 → 仍要打开”确认。后续应用自动更新的产物签名需要单独配置，不能代替 macOS 签名和公证。
+ad-hoc 签名不包含 Apple 公证。首次打开下载的应用时，如提示“Apple 无法验证”，请确认来源后到“系统设置 → 隐私与安全 → 仍要打开”确认，按系统提示输入 Mac 登录密码或使用触控 ID。具体提示取决于 macOS 版本和安全策略。
+
+构建后可检查应用签名；签名后不要再修改 Bundle 内容：
+
+```bash
+codesign --verify --deep --strict --verbose=2 "src-tauri/target/release/bundle/macos/Oh My Rime.app"
+codesign --display --verbose=4 "src-tauri/target/release/bundle/macos/Oh My Rime.app"
+```
+
+验证应成功，默认签名信息应包含 `Signature=adhoc`。交叉编译时需在 `target/` 后加入对应的 target triple。后续应用自动更新所用的 `TAURI_SIGNING_PRIVATE_KEY` 需要单独配置，与这里的 macOS 签名不同，不能代替 Developer ID 签名和 Apple 公证。
 
 ## 更新流程
 

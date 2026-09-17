@@ -54,7 +54,9 @@ DMG, Windows installers, and Linux packages are produced by the platform-specifi
 
 The desktop installer contains the GUI executable only. The standalone CLI is built separately with the `cli` Cargo feature and published under platform-specific names.
 
-macOS release bundles are ad-hoc signed but are not Apple-notarized. After copying the app to Applications and attempting to open it, confirm its source and use **System Settings → Privacy & Security → Open Anyway** if Apple cannot verify it. See [Apple's instructions](https://support.apple.com/en-us/102445). A damaged-app warning is a separate integrity problem; redownload and verify the signature in that case.
+macOS builds use ad-hoc signing by default, both locally and in CI, without requiring a signing key or environment variable. They are not Apple-notarized. After copying the app to Applications and attempting to open it, confirm its source and use **System Settings → Privacy & Security → Open Anyway** if Apple cannot verify it. Enter your Mac login password or use Touch ID when prompted. The exact behavior depends on your macOS version and security policy. See [Apple's instructions](https://support.apple.com/en-us/102445). If macOS reports the app as damaged, redownload it and verify its signature; the alert alone does not identify whether the cause is download corruption or a signing problem.
+
+Tauri updater keys verify update artifacts and do not replace macOS code signing or Apple notarization. See the [GUI build guide](GUI_README.md#构建) for signature verification commands.
 
 After an update, use the reload/redeploy action provided by your Rime input method so the new configuration takes effect.
 
