@@ -21,6 +21,7 @@ import {
   XCircle,
 } from "lucide-react";
 import "./styles.css";
+import { AppUpdate } from "./AppUpdate";
 
 type TargetOption = { label: string; path: string };
 type SystemInfo = { os: string; options: TargetOption[] };
@@ -85,6 +86,8 @@ function App() {
   const [targetDir, setTargetDir] = useState("");
   const [customUrl, setCustomUrl] = useState("");
   const [running, setRunning] = useState(false);
+  const [appInstalling, setAppInstalling] = useState(false);
+  const [appVersion, setAppVersion] = useState("");
   const [progress, setProgress] = useState<Progress>({
     phase: "ready",
     percentage: 0,
@@ -107,6 +110,9 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
+    void invoke<string>("get_app_version")
+      .then(setAppVersion)
+      .catch((error) => addLog(`读取应用版本失败：${String(error)}`));
     void invoke<SystemInfo>("get_system_info")
       .then((value) => {
         setSystem(value);
@@ -148,7 +154,7 @@ function App() {
   }
 
   async function runAction(action: Action) {
-    if (running) return;
+    if (running || appInstalling) return;
     if (!targetDir.trim()) {
       setActiveTab("update");
       addLog("请先选择或填写 Rime 配置目录");
@@ -244,7 +250,16 @@ function App() {
               </button>
             ))}
           </div>
-          <span className="version">v2.1.0 · OMR</span>
+          {appVersion && (
+            <AppUpdate
+              currentVersion={appVersion}
+              rimeRunning={running}
+              onInstallingChange={setAppInstalling}
+            />
+          )}
+          <span className="version">
+            {appVersion ? `v${appVersion} · OMR` : "OMR"}
+          </span>
         </div>
       </aside>
       <main className="main-panel">
@@ -294,7 +309,7 @@ function App() {
                             ? document.getElementById("custom-url")?.focus()
                             : void runAction(id)
                         }
-                        disabled={running}
+                        disabled={running || appInstalling}
                       >
                         <span className="action-icon">
                           <Icon size={21} />
@@ -319,7 +334,7 @@ function App() {
                     />
                     <button
                       onClick={() => void runAction("custom")}
-                      disabled={running || !customUrl.trim()}
+                      disabled={running || appInstalling || !customUrl.trim()}
                     >
                       更新
                     </button>

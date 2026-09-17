@@ -1,3 +1,4 @@
+mod app_update;
 pub mod rime_core;
 
 use rime_core::{Action, SystemInfo, UpdateProgress};
@@ -19,10 +20,15 @@ fn get_system_info() -> SystemInfo {
 #[tauri::command]
 async fn execute_update(
     app: AppHandle,
+    state: tauri::State<'_, app_update::AppUpdateState>,
     action: String,
     target_dir: String,
     custom_url: Option<String>,
-) -> UpdateResult {
+) -> Result<UpdateResult, String> {
+    let _task = state
+        .task_gate
+        .try_lock()
+        .map_err(|_| "已有更新任务正在执行，请稍后再试".to_string())?;
     let action = match action.as_str() {
         "main" => Action::Main,
         "model" => Action::Model,
@@ -31,10 +37,10 @@ async fn execute_update(
             url: custom_url.unwrap_or_default(),
         },
         _ => {
-            return UpdateResult {
+            return Ok(UpdateResult {
                 success: false,
                 error: Some("未知的更新类型".into()),
-            }
+            })
         }
     };
     let result = tauri::async_runtime::spawn_blocking(move || {
@@ -43,7 +49,7 @@ async fn execute_update(
         })
     })
     .await;
-    match result {
+    Ok(match result {
         Ok(Ok(())) => UpdateResult {
             success: true,
             error: None,
@@ -56,7 +62,7 @@ async fn execute_update(
             success: false,
             error: Some(format!("更新任务异常: {error}")),
         },
-    }
+    })
 }
 
 #[tauri::command]
@@ -89,11 +95,16 @@ fn open_directory_in_manager(path: String) -> Result<(), String> {
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(app_update::AppUpdateState::default())
         .invoke_handler(tauri::generate_handler![
             get_system_info,
             execute_update,
             select_directory,
-            open_directory_in_manager
+            open_directory_in_manager,
+            app_update::get_app_version,
+            app_update::check_app_update,
+            app_update::install_app_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running Oh My Rime");

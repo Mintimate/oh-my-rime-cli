@@ -545,3 +545,97 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+.app-update-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  color: #798397;
+  background: transparent;
+  font-size: 11px;
+}
+.app-update-link.available {
+  color: #2e6cf6;
+}
+.app-update-dialog {
+  width: min(520px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  padding: 26px;
+  overflow-y: auto;
+  border: 1px solid #e2e7f0;
+  border-radius: 18px;
+  color: #1d2635;
+  background: #fff;
+  box-shadow: 0 24px 80px #0003;
+}
+.app-update-dialog::backdrop {
+  background: #10182688;
+}
+[data-theme="dark"] .app-update-dialog {
+  color: #e6eaf2;
+  background: #1d222d;
+  border-color: #303746;
+}
+.app-update-heading,
+.app-update-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.app-update-heading p,
+.app-update-hint,
+.app-download-progress p {
+  color: #8691a3;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.update-channel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0;
+  font-size: 13px;
+}
+.app-update-message {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.app-release-notes {
+  min-height: 0;
+  max-height: 200px;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.app-update-error {
+  color: #d65c65;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  margin-top: 12px;
+}
+.app-update-actions {
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+.install-update-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #4b7df0;
+  color: #fff;
+  font-size: 12px;
+}
+.app-download-progress {
+  margin-top: 16px;
+}
+.app-download-progress progress {
+  width: 100%;
+  accent-color: #4b7df0;
+}
