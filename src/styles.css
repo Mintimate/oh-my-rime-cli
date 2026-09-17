@@ -224,11 +224,22 @@ h3 {
   grid-template-columns: minmax(0, 1.22fr) minmax(330px, 0.78fr);
   gap: 22px;
 }
+.workspace-grid > * {
+  min-width: 0;
+}
 .section-heading {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 12px;
   margin-bottom: 15px;
+}
+.section-heading > div {
+  min-width: 0;
+}
+.section-heading > svg,
+.section-heading > button {
+  flex-shrink: 0;
 }
 .section-heading p {
   margin-top: 5px;
@@ -356,10 +367,12 @@ input {
 }
 .side-column {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 16px;
 }
 .panel-card {
+  min-width: 0;
   padding: 16px;
   border: 1px solid #e2e7f0;
   border-radius: 15px;
@@ -399,6 +412,8 @@ input {
   border-color: #405581;
 }
 .target-option span {
+  min-width: 0;
+  flex: 1;
   display: grid;
   gap: 4px;
 }
@@ -406,7 +421,7 @@ input {
   font-size: 11px;
 }
 .target-option small {
-  max-width: 245px;
+  max-width: 100%;
   overflow: hidden;
   color: #929cac;
   font-size: 10px;
@@ -414,6 +429,7 @@ input {
   white-space: nowrap;
 }
 .target-option svg {
+  flex-shrink: 0;
   color: #4e82ed;
 }
 .full-input {
@@ -432,6 +448,10 @@ input {
 }
 .progress-card {
   padding-bottom: 18px;
+}
+.progress-card .section-heading p {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
 }
 .progress-track {
   height: 7px;
@@ -509,6 +529,7 @@ pre {
     Menlo,
     monospace;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 [data-theme="dark"] pre {
   background: #161a22;
@@ -536,10 +557,10 @@ pre {
     padding: 30px 28px;
   }
   .workspace-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .side-column {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .help-grid {
     grid-template-columns: 1fr;

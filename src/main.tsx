@@ -369,7 +369,7 @@ function App() {
                       >
                         <span>
                           <strong>{option.label}</strong>
-                          <small>{option.path}</small>
+                          <small title={option.path}>{option.path}</small>
                         </span>
                         {targetDir === option.path && (
                           <CheckCircle2 size={18} />
