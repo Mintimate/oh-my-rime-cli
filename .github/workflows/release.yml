@@ -166,6 +166,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: npm run tauri
+          # Retry transient GitHub upload errors without discarding built bundles.
+          retryAttempts: 3
           args: ${{ matrix.args }}
           releaseId: ${{ needs.prepare.outputs.release_id }}
           tagName: ${{ env.RELEASE_TAG }}
