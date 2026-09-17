@@ -11,6 +11,7 @@ import {
   FolderOpen,
   History,
   LoaderCircle,
+  Monitor,
   Moon,
   PackageCheck,
   Settings2,
@@ -26,6 +27,14 @@ type SystemInfo = { os: string; options: TargetOption[] };
 type Progress = { phase: string; percentage: number | null; message: string };
 type Result = { success: boolean; error: string | null };
 type Action = "main" | "model" | "dict" | "custom";
+type Theme = "light" | "system" | "dark";
+
+const appIcon = new URL("../src-tauri/icons/128x128.png", import.meta.url).href;
+const themes = [
+  { value: "light", label: "亮色", icon: Sun },
+  { value: "system", label: "跟随系统", icon: Monitor },
+  { value: "dark", label: "暗色", icon: Moon },
+] as const;
 
 const actions: {
   id: Action;
@@ -68,10 +77,10 @@ function App() {
   const [activeTab, setActiveTab] = useState<"update" | "logs" | "help">(
     "update",
   );
-  const [theme, setTheme] = useState<"light" | "dark">(
-    () =>
-      (localStorage.getItem("oh-my-rime-theme") as "light" | "dark") || "light",
-  );
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem("oh-my-rime-theme");
+    return saved === "light" || saved === "dark" ? saved : "system";
+  });
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [targetDir, setTargetDir] = useState("");
   const [customUrl, setCustomUrl] = useState("");
@@ -84,8 +93,17 @@ function App() {
   const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
+    const preference = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      document.documentElement.dataset.theme =
+        theme === "system" ? (preference.matches ? "dark" : "light") : theme;
+    };
+    applyTheme();
     localStorage.setItem("oh-my-rime-theme", theme);
+    if (theme === "system") {
+      preference.addEventListener("change", applyTheme);
+      return () => preference.removeEventListener("change", applyTheme);
+    }
   }, [theme]);
 
   useEffect(() => {
@@ -183,7 +201,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">R</div>
+          <img className="brand-mark" src={appIcon} alt="" />
           <div>
             <strong>Oh My Rime</strong>
             <span>配置管理器</span>
@@ -213,23 +231,20 @@ function App() {
           </button>
         </nav>
         <div className="sidebar-bottom">
-          <div className="theme-switch">
-            <button
-              className={theme === "light" ? "selected" : ""}
-              onClick={() => setTheme("light")}
-            >
-              <Sun size={15} />
-              明亮
-            </button>
-            <button
-              className={theme === "dark" ? "selected" : ""}
-              onClick={() => setTheme("dark")}
-            >
-              <Moon size={15} />
-              暗黑
-            </button>
+          <div className="theme-switch" role="group" aria-label="外观">
+            {themes.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                className={theme === value ? "selected" : ""}
+                aria-pressed={theme === value}
+                onClick={() => setTheme(value)}
+              >
+                <Icon size={15} />
+                {label}
+              </button>
+            ))}
           </div>
-          <span className="version">v2.1.0 · Tauri</span>
+          <span className="version">v2.1.0 · OMR</span>
         </div>
       </aside>
       <main className="main-panel">
@@ -243,10 +258,6 @@ function App() {
                   ? "运行日志"
                   : "安全地管理你的 Rime"}
             </h1>
-          </div>
-          <div className="topbar-status">
-            <span className={running ? "status-dot busy" : "status-dot"}></span>
-            {running ? "正在执行任务" : "本地模式"}
           </div>
         </header>
         {activeTab === "update" && (

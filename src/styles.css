@@ -10,10 +10,12 @@
   color: #1d2635;
   background: #f5f7fb;
   font-synthesis: none;
+  color-scheme: light;
 }
 :root[data-theme="dark"] {
   color: #e6eaf2;
   background: #151921;
+  color-scheme: dark;
 }
 * {
   box-sizing: border-box;
@@ -21,7 +23,8 @@
 body {
   margin: 0;
   min-width: 860px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 button,
 input {
@@ -36,10 +39,12 @@ button:disabled {
 }
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
 }
 .sidebar {
   width: 234px;
+  flex-shrink: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   padding: 28px 16px 20px;
@@ -58,15 +63,10 @@ button:disabled {
   padding: 0 10px 36px;
 }
 .brand-mark {
-  display: grid;
-  place-items: center;
-  width: 35px;
-  height: 35px;
-  border-radius: 11px;
-  background: #29374d;
-  color: #fff;
-  font-weight: 800;
-  box-shadow: 0 7px 18px #29374d30;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .brand strong {
   display: block;
@@ -113,7 +113,8 @@ button:disabled {
   padding: 0 9px;
 }
 .theme-switch {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
   border-radius: 9px;
@@ -123,8 +124,8 @@ button:disabled {
   background: #282e3a;
 }
 .theme-switch button {
-  flex: 1;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   gap: 5px;
@@ -134,6 +135,7 @@ button:disabled {
   background: transparent;
   color: #8992a2;
   font-size: 11px;
+  white-space: nowrap;
 }
 .theme-switch button.selected {
   color: #2e6cf6;
@@ -150,15 +152,17 @@ button:disabled {
 }
 .main-panel {
   flex: 1;
+  min-width: 0;
+  overflow-y: auto;
   max-width: 1380px;
-  padding: 37px 46px 55px;
+  padding: 28px 32px;
   margin: 0 auto;
 }
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 25px;
+  margin-bottom: 20px;
 }
 .eyebrow,
 .hero-kicker {
@@ -186,31 +190,12 @@ h3 {
   font-size: 15px;
   letter-spacing: -0.02em;
 }
-.topbar-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 7px;
-  color: #8a94a6;
-  font-size: 12px;
-}
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #49bf91;
-  box-shadow: 0 0 0 4px #49bf9120;
-}
-.status-dot.busy {
-  background: #f2a43f;
-  box-shadow: 0 0 0 4px #f2a43f20;
-}
 .hero {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
-  padding: 25px 28px;
+  margin-bottom: 20px;
+  padding: 20px 24px;
   border: 1px solid #dfe8f8;
   border-radius: 16px;
   background: linear-gradient(118deg, #eaf1ff, #f5f8ff);
@@ -375,7 +360,7 @@ input {
   gap: 16px;
 }
 .panel-card {
-  padding: 20px;
+  padding: 16px;
   border: 1px solid #e2e7f0;
   border-radius: 15px;
   background: #fff;
