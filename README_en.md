@@ -1,65 +1,126 @@
-# oh-my-rime
+# Oh My Rime · OMR
 
-A local desktop manager for updating and maintaining Rime configurations across macOS, Linux, and Windows.
+[简体中文](README.md) · [Desktop and release guide](GUI_README.md) · [Download releases](https://github.com/Mintimate/oh-my-rime-cli/releases)
 
-The desktop application is built with **Tauri 2 + React + TypeScript + Rust**. The GUI and the standalone Rust CLI share the same update core, including platform detection, streaming downloads, backups, safe extraction, and rollback.
+A desktop application and standalone CLI for maintaining [Oh-my-rime](https://github.com/Mintimate/oh-my-rime) configurations on macOS, Windows, and Linux.
+
+> This document describes the `rust-ui` branch, built with Tauri 2, React, TypeScript, and Rust. Older Go packages do not include this interface or the application updater. Check the release notes for the package you download.
+
+## Preview
+
+Real macOS screenshots of the desktop application. The preview follows the document's color scheme; the app offers Light, System, and Dark modes.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/img/usingAppDark.jpg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/img/usingApp.jpg">
+  <img alt="OMR desktop: configuration updates, target directories, progress and theme controls" src="assets/img/usingApp.jpg">
+</picture>
+
+[Light theme](assets/img/usingApp.jpg) · [Dark theme](assets/img/usingAppDark.jpg)
 
 ## Features
 
-- Update the Mintimate Rime scheme
-- Update the Wanxiang gram model
-- Update the Wanxiang dictionary package
-- Install a custom `.zip` or `.gram` resource URL
-- Preserve user `*.custom.yaml` files
-- Create a backup before each update
-- Restore the previous configuration after a failed update
-- macOS, Linux, and Windows target-directory presets
-- Local-only operation without telemetry or a backend service
+- Update the Mintimate scheme, Wanxiang model and dictionary, or a custom `.zip` or `.gram` URL.
+- Detect platform-specific Rime directories or select a directory manually.
+- Download to a temporary directory, back up before changing files, and attempt rollback on failure. Scheme updates preserve `*.custom.yaml` files.
+- View progress and copy logs from the current session.
+- Choose Light, System, or Dark appearance with saved preferences.
+- Check for application updates, read release notes, download, verify signatures, install and restart. Prerelease updates are optional.
+- Share the Rust update core between the GUI and CLI, without uploading user configurations or collecting telemetry.
 
-## Requirements
+## Download and install
 
-- Node.js 20+ and npm
-- Rust stable and Cargo
-- Tauri 2 platform build dependencies
-- Go is no longer required for the desktop application
+Choose your platform and architecture on the [Releases page](https://github.com/Mintimate/oh-my-rime-cli/releases). Rust packages use the following names; test releases are marked **Pre-release**.
+
+| Platform | Desktop installer | Standalone CLI |
+| --- | --- | --- |
+| macOS Apple Silicon | `Oh-My-Rime_<version>_macOS_arm64.dmg` | `cli-macos-arm64` |
+| macOS Intel | `Oh-My-Rime_<version>_macOS_x64.dmg` | `cli-macos-x64` |
+| Windows x64 | `.msi` or `-setup.exe` | `cli-windows-x64.exe` |
+| Linux x64 | `.AppImage`, `.deb` or `.rpm` | `cli-linux-x64` |
+
+The `.app.tar.gz`, `.sig` and `latest.json` files serve the application updater. Use the DMG for manual macOS installation.
+
+### First launch on macOS
+
+macOS bundles use ad-hoc signing and are not Apple-notarized.
+
+1. Copy `Oh My Rime.app` into Applications and attempt to open it.
+2. If Apple cannot verify the developer, confirm the download source and use **System Settings → Privacy & Security → Open Anyway**. Enter your Mac login password or use Touch ID when prompted.
+
+The exact behavior depends on your macOS version and security policy. If the app is reported as damaged, redownload it and verify its signature. See [Apple's instructions](https://support.apple.com/en-us/102445) and the [signature verification guide](GUI_README.md#构建).
+
+Windows installers are currently unsigned. Download them from this project's Releases page and verify their source before running them.
+
+## Update Rime configurations
+
+1. Open **方案更新** and select or enter a Rime configuration directory.
+2. Choose a scheme, model or dictionary update, or enter a custom resource URL.
+3. Follow the progress and open **运行日志** for details.
+4. After success, use your input method's reload/redeploy action to apply the changes.
+
+Directory detection supports Weasel on Windows (registry, then `%APPDATA%\Rime`), Squirrel and Fcitx5 on macOS, and iBus, Fcitx5 and Fcitx5 Flatpak on Linux.
+
+## Update the OMR application
+
+The app checks for updates at startup. Click **检查应用更新** in the sidebar to check manually. When a new version is available, read its notes and click **下载并安装** to download, verify and install it. The app restarts after installation. Installation is blocked while a Rime configuration update is running.
+
+![Application updater with current version, prerelease preference and check result](assets/img/appUpdate.jpg)
+
+This screenshot shows the real state with no available update; it does not simulate a release or download progress.
+
+- Stable installations default to stable releases; prerelease installations default to including prereleases on first use. Toggle **接收测试版** to change this preference.
+- Only releases with updater manifests are considered, excluding older Go packages.
+- Network failures do not block other functionality; retry the check later.
+- Older versions without updater support need one manual installation. The standalone CLI must still be updated manually.
+- On macOS, run the app from Applications, not from a read-only DMG.
 
 ## Development
 
+Requirements: Node.js 20.19+ (or 22.12+), stable Rust, and the platform dependencies for Tauri 2. Frontend code is in `src/`; the shared update core is in `src-tauri/src/rime_core.rs`.
+
 ```bash
-npm install
+npm ci
 npm run dev
-npm run build:web
-npm run build
-cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-The Rust update core is located at `src-tauri/src/rime_core.rs`.
+Build locally without an updater signing key:
 
-Run the standalone CLI with:
+```bash
+npm run build -- --config '{"bundle":{"createUpdaterArtifacts":false}}'
+```
+
+Run the CLI:
 
 ```bash
 cargo run --manifest-path src-tauri/Cargo.toml --features cli --bin oh-my-rime-cli
 ```
 
-## Build outputs
-
-On macOS, you can validate the application bundle without creating a DMG:
+Validation:
 
 ```bash
-npx tauri build --bundles app
+npm run typecheck
+npm run build:web
+npm run test:release
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+cargo test --manifest-path src-tauri/Cargo.toml --features cli
 ```
 
-DMG, Windows installers, and Linux packages are produced by the platform-specific release workflow.
+## Publishing
 
-The desktop installer contains the GUI executable only. The standalone CLI is built separately with the `cli` Cargo feature and published under platform-specific names.
+Run `npm run bump <version>` to synchronize the npm, Tauri and Cargo versions. Commit the changes and push a matching `v<version>` tag, such as `2.1.1-test.1` / `v2.1.1-test.1`. Changing only the Git tag is not sufficient for application updates.
 
-macOS builds use ad-hoc signing by default, both locally and in CI, without requiring a signing key or environment variable. They are not Apple-notarized. After copying the app to Applications and attempting to open it, confirm its source and use **System Settings → Privacy & Security → Open Anyway** if Apple cannot verify it. Enter your Mac login password or use Touch ID when prompted. The exact behavior depends on your macOS version and security policy. See [Apple's instructions](https://support.apple.com/en-us/102445). If macOS reports the app as damaged, redownload it and verify its signature; the alert alone does not identify whether the cause is download corruption or a signing problem.
+GitHub Actions builds the installers and CLI, signs updater packages, generates `latest.json`, and verifies the uploaded packages before publishing. Configure the `TAURI_SIGNING_PRIVATE_KEY` repository Secret; encrypted keys also require their password. Never commit the private key, and retain the same signing key for future updates.
 
-Tauri updater keys verify update artifacts and do not replace macOS code signing or Apple notarization. See the [GUI build guide](GUI_README.md#构建) for signature verification commands.
+See the [signed release guide](GUI_README.md#发布签名更新) for details.
 
-After an update, use the reload/redeploy action provided by your Rime input method so the new configuration takes effect.
+## Contributing and license
 
-## License
+MIT License. Issues and pull requests are welcome.
 
-MIT License.
+## Support
+
+- [Mintimate's Blog](https://www.mintimate.cn)
+- [Support on Afdian](https://afdian.net/a/mintimate)
+- [Bilibili](https://space.bilibili.com/355567627)
+- [YouTube](https://www.youtube.com/channel/UCI7LLdUGNzkcKOE7grAqCoA)
