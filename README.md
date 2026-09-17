@@ -1,10 +1,10 @@
 # Oh My Rime · OMR
 
-[English](README_en.md) · [桌面端使用与发布说明](GUI_README.md) · [下载 Releases](https://github.com/Mintimate/oh-my-rime-cli/releases)
+[English](README_en.md) · [桌面端使用与发布说明](GUI_README.md) · [GitHub 下载](https://github.com/Mintimate/oh-my-rime-cli/releases) · [CNB 镜像下载](https://cnb.cool/Mintimate/rime/oh-my-rime-cli/-/releases)
 
 用于更新和维护 [薄荷输入法 Oh-my-rime](https://github.com/Mintimate/oh-my-rime) 配置的桌面工具与独立 CLI，支持 macOS、Windows 和 Linux。
 
-> 本文对应 `rust-ui` 分支：Tauri 2 + React + TypeScript + Rust。旧 Go 版安装包不包含下述新界面和应用自动更新功能，请以安装包对应的发布说明为准。
+> v4.0.0 起使用 Tauri 2 + React + TypeScript + Rust。旧 Go/Wails 版本需手动安装一次新版，之后可使用应用自动更新。
 
 ## 界面演示
 
@@ -112,9 +112,11 @@ cargo test --manifest-path src-tauri/Cargo.toml --features cli
 
 ## 发布版本
 
-使用 `npm run bump <版本>` 同步 npm、Tauri 和 Cargo 的版本，提交后推送匹配的 `v<版本>` 标签。例如，测试版可使用 `2.1.1-test.1` 与 `v2.1.1-test.1`。不要只改 Git 标签而保持应用版本不变。
+使用 `npm run bump <版本>` 同步 npm、Tauri 和 Cargo 的版本，提交后推送匹配的 `v<版本>` 标签。例如，下一个测试版可使用 `4.0.1-test.1` 与 `v4.0.1-test.1`。不要只改 Git 标签而保持应用版本不变。
 
 GitHub Actions 会构建安装包和 CLI，签署更新产物，生成 `latest.json`，验证全部更新包后才公开 Release。仓库需配置 `TAURI_SIGNING_PRIVATE_KEY` Secret；加密私钥还需配置对应密码。私钥不得提交到仓库，后续版本须继续使用同一套签名密钥。
+
+GitHub 发布成功后会自动同步标签到 CNB，由 `.cnb.yml` 拉取同一批安装包、CLI 和签名并创建 CNB Release。应用内更新目前使用 GitHub；CNB 提供镜像下载。
 
 完整流程见 [发布签名更新](GUI_README.md#发布签名更新)。
 

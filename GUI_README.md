@@ -81,10 +81,19 @@ cargo run --manifest-path src-tauri/Cargo.toml --features cli --bin oh-my-rime-c
 
 ## 发布签名更新
 
-1. 使用 `npm run bump 2.1.1-test.1` 同步 npm、Tauri 和 Cargo 版本，然后提交并推送同名 `v2.1.1-test.1` 标签。正式版同理。CI 拒绝标签和应用版本不一致，测试版不能只改标签而保持应用版本不变。
+1. 使用 `npm run bump 4.0.1-test.1` 同步 npm、Tauri 和 Cargo 版本，然后提交并推送同名 `v4.0.1-test.1` 标签。正式版同理。CI 拒绝标签和应用版本不一致，测试版不能只改标签而保持应用版本不变。
 2. GitHub Actions 需要仓库 Secret `TAURI_SIGNING_PRIVATE_KEY`（私钥文件内容）；如果私钥加密，还需 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`。公钥在 `src-tauri/tauri.conf.json` 的 `plugins.updater.pubkey` 中。
 3. CI 构建各平台安装包及 `.sig`，统一生成 `latest.json`，使用嵌入的公钥验证上传产物，全部通过后才公开 Release。任何签名缺失或验证失败均保留草稿，不能进入自动更新渠道。
 
 私钥不可提交到仓库，必须安全备份并在后续版本继续使用；随意更换公钥会使已安装版本无法验证新更新。macOS ad-hoc 签名与 updater 签名是两套独立机制。
 
 本地只检查 UI 和应用 Bundle 时使用上面的 `createUpdaterArtifacts: false` 覆盖配置；正式发布始终启用更新产物和签名。
+
+## CNB 产物镜像
+
+- GitHub 为源码及安装包构建来源。合并到 `main` 后，`同步到 CNB` 工作流把源码同步到 `Mintimate/rime/oh-my-rime-cli`。
+- `Release` 工作流成功公开版本后，再同步该版本标签，触发 CNB 的 `.cnb.yml`。
+- CNB 拉取 21 个产物（安装包、4 个 CLI、7 个签名及更新清单），再次验签，改写清单下载地址，上传齐全后才公开 CNB Release。
+- GitHub 仓库需要 `CNB_GIT_PASSWORD` Actions Secret。CNB 构建使用平台提供的 `CNB_TOKEN` 上传附件，不需要复制 updater 私钥。
+- 同步采用普通推送，遇到 CNB 分支分叉或同名标签冲突会失败，不会强制覆盖历史。需要手动重试时，可重新运行 GitHub 同步工作流或 CNB 对应标签的构建。
+- 应用内更新目前从 GitHub 检查。CNB 镜像更新清单保留原签名，仅替换下载 URL。

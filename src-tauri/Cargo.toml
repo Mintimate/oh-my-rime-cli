@@ -1,6 +1,6 @@
 [package]
 name = "oh-my-rime"
-version = "2.1.0"
+version = "4.0.0"
 description = "Oh My Rime desktop configuration manager"
 authors = ["Mintimate"]
 edition = "2021"

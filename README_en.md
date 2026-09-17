@@ -1,10 +1,10 @@
 # Oh My Rime · OMR
 
-[简体中文](README.md) · [Desktop and release guide](GUI_README.md) · [Download releases](https://github.com/Mintimate/oh-my-rime-cli/releases)
+[简体中文](README.md) · [Desktop and release guide](GUI_README.md) · [GitHub downloads](https://github.com/Mintimate/oh-my-rime-cli/releases) · [CNB mirror](https://cnb.cool/Mintimate/rime/oh-my-rime-cli/-/releases)
 
 A desktop application and standalone CLI for maintaining [Oh-my-rime](https://github.com/Mintimate/oh-my-rime) configurations on macOS, Windows, and Linux.
 
-> This document describes the `rust-ui` branch, built with Tauri 2, React, TypeScript, and Rust. Older Go packages do not include this interface or the application updater. Check the release notes for the package you download.
+> Starting with v4.0.0, OMR uses Tauri 2, React, TypeScript, and Rust. Older Go/Wails versions need one manual installation before they can use the application updater.
 
 ## Preview
 
@@ -108,9 +108,11 @@ cargo test --manifest-path src-tauri/Cargo.toml --features cli
 
 ## Publishing
 
-Run `npm run bump <version>` to synchronize the npm, Tauri and Cargo versions. Commit the changes and push a matching `v<version>` tag, such as `2.1.1-test.1` / `v2.1.1-test.1`. Changing only the Git tag is not sufficient for application updates.
+Run `npm run bump <version>` to synchronize the npm, Tauri and Cargo versions. Commit the changes and push a matching `v<version>` tag, such as `4.0.1-test.1` / `v4.0.1-test.1`. Changing only the Git tag is not sufficient for application updates.
 
 GitHub Actions builds the installers and CLI, signs updater packages, generates `latest.json`, and verifies the uploaded packages before publishing. Configure the `TAURI_SIGNING_PRIVATE_KEY` repository Secret; encrypted keys also require their password. Never commit the private key, and retain the same signing key for future updates.
+
+After a successful GitHub release, Actions mirrors its tag to CNB. The `.cnb.yml` pipeline downloads and verifies the same installers, CLI files and signatures before publishing them on CNB. In-app updates currently use GitHub; CNB provides mirror downloads.
 
 See the [signed release guide](GUI_README.md#发布签名更新) for details.
 
