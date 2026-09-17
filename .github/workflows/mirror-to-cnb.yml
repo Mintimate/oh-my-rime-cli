@@ -10,6 +10,11 @@ on:
     types:
       - completed
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Optional published release tag to mirror"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -30,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'main' }}
+          ref: ${{ inputs.release_tag || (github.event_name == 'workflow_run' && github.event.workflow_run.head_sha) || 'main' }}
 
       - name: 检查 CNB 凭据
         env:
@@ -43,7 +48,7 @@ jobs:
           fi
 
       - name: 同步 main
-        if: github.event_name != 'workflow_run'
+        if: github.event_name != 'workflow_run' && !inputs.release_tag
         env:
           CNB_GIT_PASSWORD: ${{ secrets.CNB_GIT_PASSWORD }}
         shell: bash
@@ -65,9 +70,10 @@ jobs:
             "HEAD:refs/heads/main"
 
       - name: 同步已发布标签并触发 CNB 拉取
-        if: github.event_name == 'workflow_run'
+        if: github.event_name == 'workflow_run' || inputs.release_tag
         env:
           CNB_GIT_PASSWORD: ${{ secrets.CNB_GIT_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           RELEASE_TAG="v$(jq -r '.version' src-tauri/tauri.conf.json)"
@@ -79,6 +85,7 @@ jobs:
           git fetch origin \
             "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
           test "$(git rev-parse "${RELEASE_TAG}^{commit}")" = "$(git rev-parse HEAD)"
+          gh release view "${RELEASE_TAG}" --json isDraft --jq '.isDraft' | grep -qx false
 
           umask 077
           askpass="${RUNNER_TEMP}/cnb-git-askpass.sh"

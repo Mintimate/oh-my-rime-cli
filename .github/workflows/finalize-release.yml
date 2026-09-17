@@ -1,0 +1,83 @@
+name: Finalize release
+run-name: Finalize ${{ inputs.tag }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing draft release tag"
+        required: true
+        type: string
+      build_run_id:
+        description: "Release workflow run with all builds successful"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      BUILD_RUN_ID: ${{ inputs.build_run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate original build and draft release
+        shell: bash
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+          [[ "$BUILD_RUN_ID" =~ ^[0-9]+$ ]]
+          tag_commit="$(git rev-parse "${RELEASE_TAG}^{commit}")"
+          gh api "repos/${GH_REPO}/actions/runs/${BUILD_RUN_ID}" > run.json
+          jq -e --arg sha "$tag_commit" --arg tag "$RELEASE_TAG" '
+            .head_sha == $sha and .head_branch == $tag and .event == "push"
+            and .path == ".github/workflows/release.yml" and .status == "completed"
+          ' run.json
+          gh api "repos/${GH_REPO}/actions/runs/${BUILD_RUN_ID}/jobs?filter=latest&per_page=100" > jobs.json
+          for job in Test 'Prepare draft release' 'CLI macOS x64' 'CLI macOS arm64' 'CLI Windows x64' 'CLI Linux x64' 'macOS Intel' 'macOS Apple Silicon' 'Windows x64' 'Linux x64'; do
+            jq -e --arg job "$job" '[.jobs[] | select(.name == $job and .conclusion == "success")] | length == 1' jobs.json
+          done
+          gh api --paginate --slurp "repos/${GH_REPO}/releases?per_page=100" |
+            jq -e --arg tag "$RELEASE_TAG" '[.[][] | select(.tag_name == $tag and .draft == true)] | if length == 1 then .[0] else error("Expected one draft release") end' > release.json
+          git show "${RELEASE_TAG}:src-tauri/tauri.conf.json" > release-config.json
+          jq -e --arg version "${RELEASE_TAG#v}" '.version == $version' release-config.json
+      - name: Generate and verify updater manifest
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y minisign
+          mkdir updater-signatures
+          gh release download "$RELEASE_TAG" --pattern '*.sig' --dir updater-signatures
+          node .github/scripts/generate-updater-manifest.mjs "${RELEASE_TAG#v}" "$RELEASE_TAG" release.json updater-signatures latest.json
+          bash .github/scripts/verify-updater.sh latest.json release.json release-config.json
+          gh release upload "$RELEASE_TAG" latest.json --clobber
+      - name: Publish complete release and trigger CNB mirror
+        shell: bash
+        run: |
+          release_id="$(jq -r '.id' release.json)"
+          gh api "repos/${GH_REPO}/releases/${release_id}" > release.json
+          jq -e --arg tag "$RELEASE_TAG" '.tag_name == $tag and .draft == true' release.json
+          node .cnb/scripts/mirror-manifest.mjs assets "${RELEASE_TAG#v}" |
+            while IFS= read -r name; do
+              jq -e --arg name "$name" '[.assets[] | select(.name == $name and .state == "uploaded" and .size > 0)] | length == 1' release.json
+            done
+          if [[ "$RELEASE_TAG" == *-* ]]; then
+            gh release edit "$RELEASE_TAG" --draft=false --latest=false
+          else
+            gh release edit "$RELEASE_TAG" --draft=false --latest
+          fi
+          gh workflow run mirror-to-cnb.yml --ref main -f "release_tag=$RELEASE_TAG"
