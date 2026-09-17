@@ -1,0 +1,47 @@
+[package]
+name = "oh-my-rime"
+version = "4.0.0"
+description = "Oh My Rime desktop configuration manager"
+authors = ["Mintimate"]
+edition = "2021"
+license = "MIT"
+
+[lib]
+name = "oh_my_rime_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "oh-my-rime"
+path = "src/main.rs"
+
+[[bin]]
+name = "oh-my-rime-cli"
+path = "src/bin/oh-my-rime-cli.rs"
+required-features = ["cli"]
+
+[features]
+# The desktop installer bundles only the GUI executable. Build the standalone
+# CLI explicitly with --features cli, like the separate CLI release jobs.
+cli = []
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+chrono = { version = "0.4", features = ["clock"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls", "system-proxy"] }
+rfd = "0.16"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2.11.3", features = [] }
+tauri-plugin-updater = "2.10.1"
+semver = "1"
+tokio = { version = "1", features = ["sync"] }
+tempfile = "3"
+zip = "2.4"
+
+[dev-dependencies]
+tempfile = "3"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"

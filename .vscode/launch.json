@@ -1,45 +1,18 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Debug Main (GUI)",
-            "type": "go",
-            "request": "launch",
-            "mode": "debug",
-            "program": "${workspaceFolder}",
-            "env": {},
-            "args": [],
-            "showLog": true,
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Debug CLI",
-            "type": "go",
-            "request": "launch",
-            "mode": "debug",
-            "program": "${workspaceFolder}/cmd/cli/main.go",
-            "env": {},
-            "args": [],
-            "showLog": true,
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Debug with Args",
-            "type": "go",
-            "request": "launch",
-            "mode": "debug",
-            "program": "${workspaceFolder}",
-            "env": {},
-            "args": ["--help"],
-            "showLog": true,
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Attach to Process",
-            "type": "go",
-            "request": "attach",
-            "mode": "local",
-            "processId": 0
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Oh My Rime",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Debug Rust CLI",
+      "type": "cargo",
+      "request": "launch",
+      "cargo": { "args": ["run", "--bin", "oh-my-rime-cli"], "filter": { "name": "oh-my-rime-cli", "kind": "bin" } }
+    }
+  ]
 }

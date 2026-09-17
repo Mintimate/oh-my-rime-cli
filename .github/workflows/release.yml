@@ -2,12 +2,11 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag, for example v2.0.1"
+        description: "Release tag, for example v2.1.0"
         required: true
         type: string
 
@@ -15,9 +14,12 @@ permissions:
   contents: write
 
 env:
-  GO_VERSION: "1.23.4"
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  GH_REPO: ${{ github.repository }}
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -25,242 +27,283 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-node@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Install GUI build dependencies
+          node-version: 20
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Install Linux WebKit dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+      - run: npm ci
+      - run: node --test .github/scripts/*.test.mjs
+      - run: npm run typecheck
+      - run: npm run build:web
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --features cli
 
-      - name: Setup dummy frontend for testing
-        run: mkdir -p frontend/dist && touch frontend/dist/index.html
-
-      - name: Run tests
-        run: go test -vet=off ./...
-
-  build-cli:
-    name: CLI ${{ matrix.name }}
+  prepare:
+    name: Prepare draft release
     needs: test
     runs-on: ubuntu-22.04
+    outputs:
+      release_id: ${{ steps.release.outputs.release_id }}
+      app_version: ${{ steps.release.outputs.app_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create or reuse one draft release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          test "$(git rev-list -n 1 "${RELEASE_TAG}")" = "${GITHUB_SHA}"
+          test -n "${TAURI_SIGNING_PRIVATE_KEY}" || { echo "::error::Missing TAURI_SIGNING_PRIVATE_KEY secret"; exit 1; }
+          node .github/scripts/check-release-version.mjs "${RELEASE_TAG}"
+          echo "app_version=$(jq -r '.version' src-tauri/tauri.conf.json)" >> "${GITHUB_OUTPUT}"
+
+          release_pages="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+          release_count="$(jq --arg tag "${RELEASE_TAG}" '[.[][] | select(.tag_name == $tag)] | length' <<<"${release_pages}")"
+          if [[ "${release_count}" -eq 0 ]]; then
+            prerelease=false
+            if [[ "${RELEASE_TAG}" == *-* ]]; then
+              prerelease=true
+            fi
+            cat > "${RUNNER_TEMP}/release-notes.md" <<'NOTES'
+          macOS 安装包使用 ad-hoc 签名，未经过 Apple 公证。首次打开若提示“Apple 无法验证”，请在确认来源后到“系统设置 → 隐私与安全 → 仍要打开”确认。
+
+          GUI 安装包与独立 CLI 按平台分别提供。桌面端支持签名自动更新，可在左下角检查更新；测试版需启用“接收测试版”。
+          NOTES
+            if [[ -f "docs/release-notes/${RELEASE_TAG}.md" ]]; then
+              cp "docs/release-notes/${RELEASE_TAG}.md" "${RUNNER_TEMP}/release-notes.md"
+            fi
+            release_json="$(jq -n \
+              --arg tag "${RELEASE_TAG}" \
+              --arg name "Oh My Rime ${RELEASE_TAG}" \
+              --arg target "${GITHUB_SHA}" \
+              --rawfile body "${RUNNER_TEMP}/release-notes.md" \
+              --argjson prerelease "${prerelease}" \
+              '{tag_name: $tag, name: $name, target_commitish: $target, body: $body, draft: true, prerelease: $prerelease}' |
+              gh api --method POST "repos/${GITHUB_REPOSITORY}/releases" --input -)"
+          elif [[ "${release_count}" -eq 1 ]]; then
+            release_json="$(jq -c --arg tag "${RELEASE_TAG}" '.[][] | select(.tag_name == $tag)' <<<"${release_pages}")"
+          else
+            echo "::error::Multiple releases found for ${RELEASE_TAG}"
+            exit 1
+          fi
+
+          # Use the POST response immediately; the release list can lag behind creation.
+          release_id="$(jq -er --arg tag "${RELEASE_TAG}" '
+            if .tag_name == $tag and .draft == true then .id
+            else error("Expected a matching draft release; refusing to overwrite a public release") end
+          ' <<<"${release_json}")"
+          echo "release_id=${release_id}" >> "${GITHUB_OUTPUT}"
+
+  build-app:
+    name: ${{ matrix.name }}
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - goos: darwin
-            goarch: amd64
-            name: darwin-amd64
-          - goos: darwin
-            goarch: arm64
-            name: darwin-arm64
-          - goos: linux
-            goarch: amd64
-            name: linux-amd64
-          - goos: linux
-            goarch: arm64
-            name: linux-arm64
-          - goos: windows
-            goarch: amd64
-            name: windows-amd64
-            ext: .exe
+          - name: macOS Apple Silicon
+            runner: macos-15
+            args: --target aarch64-apple-darwin --bundles app,dmg
+            rust_target: aarch64-apple-darwin
+            apple_signing_identity: "-"
+            asset_os: macOS
+            asset_arch: arm64
+          - name: macOS Intel
+            runner: macos-15-intel
+            args: --target x86_64-apple-darwin --bundles app,dmg
+            rust_target: x86_64-apple-darwin
+            apple_signing_identity: "-"
+            asset_os: macOS
+            asset_arch: x64
+          - name: Windows x64
+            runner: windows-latest
+            args: --bundles msi,nsis
+            rust_target: ""
+            apple_signing_identity: ""
+            asset_os: Windows
+            asset_arch: x64
+          - name: Linux x64
+            runner: ubuntu-22.04
+            args: --bundles deb,rpm,appimage
+            rust_target: ""
+            apple_signing_identity: ""
+            asset_os: Linux
+            asset_arch: x64
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-node@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Build CLI
+          node-version: 20
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+      - name: Install Linux dependencies
+        if: startsWith(matrix.runner, 'ubuntu-')
         run: |
-          mkdir -p dist
-          mkdir -p frontend/dist && touch frontend/dist/index.html
-          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -ldflags="-s -w -X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" \
-            -o dist/oh-my-rime-cli-${{ env.RELEASE_TAG }}-${{ matrix.name }}${{ matrix.ext }} ./cmd/cli
-
-      - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+      - run: npm ci
+      - name: Build and upload Tauri bundles
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Sign the macOS app bundle; updater artifact signatures are configured separately.
+          APPLE_SIGNING_IDENTITY: ${{ matrix.apple_signing_identity }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          name: cli-${{ matrix.name }}
-          path: dist/*
-          if-no-files-found: error
+          tauriScript: npm run tauri
+          args: ${{ matrix.args }}
+          releaseId: ${{ needs.prepare.outputs.release_id }}
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: Oh My Rime ${{ env.RELEASE_TAG }}
+          releaseDraft: true
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: true
+          releaseAssetNamePattern: Oh-My-Rime_[version]_${{ matrix.asset_os }}_${{ matrix.asset_arch }}[setup][ext]
 
-  build-macos-app:
-    name: macOS App ${{ matrix.arch }}
+      - name: Verify macOS app signature
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          app_path="src-tauri/target/${{ matrix.rust_target }}/release/bundle/macos/Oh My Rime.app"
+          test ! -e "$app_path/Contents/MacOS/oh-my-rime-cli"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+          codesign --display --verbose=4 "$app_path"
+
+  build-cli:
+    name: CLI ${{ matrix.name }}
     needs: test
-    runs-on: macos-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64]
+        include:
+          - name: macOS arm64
+            runner: macos-15
+            target: aarch64-apple-darwin
+            suffix: macos-arm64
+          - name: macOS x64
+            runner: macos-15-intel
+            target: x86_64-apple-darwin
+            suffix: macos-x64
+          - name: Linux x64
+            runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            suffix: linux-x64
+          - name: Windows x64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            suffix: windows-x64.exe
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Build macOS GUI
-        run: |
-          mkdir -p dist
-          wails build -platform darwin/${{ matrix.arch }} -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -clean
-          mv "build/bin/oh-my-rime-cli.app" "build/bin/Oh My Rime.app"
-
-      - name: Sign app bundle
-        run: |
-          codesign --force --deep --sign - "build/bin/Oh My Rime.app"
-          codesign --verify --verbose "build/bin/Oh My Rime.app"
-          xattr -cr "build/bin/Oh My Rime.app"
-
-      - name: Create DMG
-        run: |
-          DMG_NAME="Oh-My-Rime-${RELEASE_TAG}-macos-${{ matrix.arch }}.dmg"
-          TEMP_DIR="dmg-temp-${{ matrix.arch }}"
-          mkdir -p "$TEMP_DIR"
-          cp -R "build/bin/Oh My Rime.app" "$TEMP_DIR/"
-          ln -s /Applications "$TEMP_DIR/Applications"
-          hdiutil create -srcfolder "$TEMP_DIR" -volname "Oh My Rime" \
-            -format UDZO -imagekey zlib-level=9 "dist/$DMG_NAME"
-
-      - name: Upload macOS app artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-app-${{ matrix.arch }}
-          path: dist/*.dmg
-          if-no-files-found: error
-
-  build-windows-app:
-    name: Windows App amd64
-    needs: test
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Install Windows build dependencies
+          targets: ${{ matrix.target }}
+      - name: Install Linux CLI build dependencies
+        if: startsWith(matrix.runner, 'ubuntu-')
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-mingw-w64 zip
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Build Windows GUI and CLI
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev pkg-config
+      - name: Build CLI
+        shell: bash
         run: |
-          mkdir -p dist/windows
-
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
-            go build -ldflags="-s -w -X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -o dist/windows/oh-my-rime-cli.exe ./cmd/cli
-
-          wails build -platform windows/amd64 -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -clean
-          cp build/bin/oh-my-rime-gui.exe dist/windows/
-
-          cp README.md LICENSE dist/windows/
-
-          cat > dist/windows/start-gui.bat << 'EOF'
-          @echo off
-          start "" "%~dp0oh-my-rime-gui.exe"
-          EOF
-
-          cat > dist/windows/start-cli.bat << 'EOF'
-          @echo off
-          chcp 65001 > nul
-          "%~dp0oh-my-rime-cli.exe"
-          pause
-          EOF
-
-          cd dist/windows
-          zip -r "../Oh-My-Rime-${RELEASE_TAG}-windows-amd64.zip" .
-
-      - name: Upload Windows app artifact
-        uses: actions/upload-artifact@v4
+          cargo build --manifest-path src-tauri/Cargo.toml --release \
+            --target "${{ matrix.target }}" --features cli --bin oh-my-rime-cli
+          cli_path="src-tauri/target/${{ matrix.target }}/release/oh-my-rime-cli"
+          if [[ "${RUNNER_OS}" == Windows ]]; then
+            cli_path="${cli_path}.exe"
+          elif [[ "${RUNNER_OS}" == macOS ]]; then
+            codesign --force --sign - "${cli_path}"
+            codesign --verify --strict --verbose=2 "${cli_path}"
+          fi
+          mkdir -p release-assets
+          cp "${cli_path}" "release-assets/cli-${{ matrix.suffix }}"
+      - uses: actions/upload-artifact@v4
         with:
-          name: windows-app-amd64
-          path: dist/*.zip
+          name: cli-${{ matrix.suffix }}
+          path: release-assets/cli-${{ matrix.suffix }}
           if-no-files-found: error
 
-  build-linux-app:
-    name: Linux App amd64
-    needs: test
+  publish:
+    name: Publish release
+    needs: [prepare, build-app, build-cli]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-node@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Install Linux GUI build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Build Linux GUI and CLI
-        run: |
-          mkdir -p dist/linux
-          wails build -platform linux/amd64 -ldflags "-X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -clean
-          cp build/bin/oh-my-rime-gui dist/linux/
-
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-            go build -ldflags="-s -w -X 'oh-my-rime-cli/internal/constants.AppVersion=${RELEASE_TAG#v}'" -o dist/linux/oh-my-rime-cli ./cmd/cli
-          cp README.md LICENSE dist/linux/
-          tar -C dist -czf "dist/Oh-My-Rime-${RELEASE_TAG}-linux-amd64.tar.gz" linux
-
-      - name: Upload Linux app artifact
-        uses: actions/upload-artifact@v4
+          node-version: 20
+      - uses: actions/download-artifact@v4
         with:
-          name: linux-app-amd64
-          path: dist/*.tar.gz
-          if-no-files-found: error
-
-  publish-release:
-    name: Publish GitHub Release
-    needs:
-      - build-cli
-      - build-macos-app
-      - build-windows-app
-      - build-linux-app
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release-assets
+          path: cli
+          pattern: cli-*
           merge-multiple: true
-
-      - name: List release assets
-        run: ls -lh release-assets
-
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: Oh My Rime ${{ env.RELEASE_TAG }}
-          generate_release_notes: true
-          files: release-assets/*
-          fail_on_unmatched_files: true
-          draft: false
-          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+      - name: Upload CLI assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${RELEASE_TAG}" cli/* --clobber
+      - name: Generate and verify signed updater manifest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+          APP_VERSION: ${{ needs.prepare.outputs.app_version }}
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y minisign
+          mkdir -p updater-signatures
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" > release.json
+          jq -e --arg tag "${RELEASE_TAG}" '.tag_name == $tag and .draft == true' release.json
+          gh release download "${RELEASE_TAG}" --pattern '*.sig' --dir updater-signatures
+          node .github/scripts/generate-updater-manifest.mjs \
+            "${APP_VERSION}" "${RELEASE_TAG}" release.json updater-signatures latest.json
+          bash .github/scripts/verify-updater.sh latest.json release.json src-tauri/tauri.conf.json
+          gh release upload "${RELEASE_TAG}" latest.json --clobber
+      - name: Publish draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+          APP_VERSION: ${{ needs.prepare.outputs.app_version }}
+        shell: bash
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" > release.json
+          jq -e --arg tag "${RELEASE_TAG}" '.tag_name == $tag and .draft == true' release.json
+          required_assets=(
+            latest.json
+            "Oh-My-Rime_${APP_VERSION}_macOS_arm64.dmg"
+            "Oh-My-Rime_${APP_VERSION}_macOS_x64.dmg"
+            "Oh-My-Rime_${APP_VERSION}_macOS_arm64.app.tar.gz"
+            "Oh-My-Rime_${APP_VERSION}_macOS_x64.app.tar.gz"
+            "Oh-My-Rime_${APP_VERSION}_Windows_x64-setup.exe"
+            "Oh-My-Rime_${APP_VERSION}_Windows_x64.msi"
+            "Oh-My-Rime_${APP_VERSION}_Linux_x64.AppImage"
+            "Oh-My-Rime_${APP_VERSION}_Linux_x64.deb"
+            "Oh-My-Rime_${APP_VERSION}_Linux_x64.rpm"
+            cli-macos-arm64 cli-macos-x64 cli-linux-x64 cli-windows-x64.exe
+          )
+          for asset in "${required_assets[@]}"; do
+            jq -e --arg name "${asset}" '
+              [.assets[] | select(.name == $name and .state == "uploaded" and .size > 0)]
+              | length == 1
+            ' release.json > /dev/null || { echo "::error::Missing asset ${asset}"; exit 1; }
+          done
+          if [[ "${RELEASE_TAG}" == *-* ]]; then
+            gh release edit "${RELEASE_TAG}" --draft=false --latest=false
+          else
+            gh release edit "${RELEASE_TAG}" --draft=false --latest
+          fi
