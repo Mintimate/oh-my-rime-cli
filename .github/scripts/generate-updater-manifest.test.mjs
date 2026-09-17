@@ -90,7 +90,7 @@ test("草稿占位 URL 转换为正式标签 URL", (t) => {
   for (const asset of release.assets) {
     asset.browser_download_url = asset.browser_download_url.replace(
       "/v1.2.3/",
-      "/untagged-956758b34bc613619b45/",
+      "/untagged-release-956758B34bc613619b45/",
     );
   }
   const manifest = generateUpdaterManifest({

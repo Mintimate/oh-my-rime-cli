@@ -71,11 +71,14 @@ function findUniqueAsset(release, expectedName) {
   const expectedUrl = `https://github.com/Mintimate/oh-my-rime-cli/releases/download/${release.tag_name}/${expectedName}`;
   const downloadUrl = new URL(asset.browser_download_url);
   const draftPrefix = "/Mintimate/oh-my-rime-cli/releases/download/";
-  const draftTag = downloadUrl.pathname.slice(draftPrefix.length).split("/")[0];
+  const draftTag = downloadUrl.pathname.startsWith(draftPrefix)
+    ? downloadUrl.pathname.slice(draftPrefix.length).split("/")[0]
+    : "";
   const validDraftUrl =
     release.draft === true &&
     downloadUrl.origin === "https://github.com" &&
-    /^untagged-[a-f0-9]+$/.test(draftTag) &&
+    draftTag.startsWith("untagged-") &&
+    draftTag.length > "untagged-".length &&
     downloadUrl.pathname === `${draftPrefix}${draftTag}/${expectedName}` &&
     !downloadUrl.search &&
     !downloadUrl.hash;
