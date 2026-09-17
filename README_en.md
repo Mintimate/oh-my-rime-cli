@@ -8,15 +8,15 @@ A desktop application and standalone CLI for maintaining [Oh-my-rime](https://gi
 
 ## Preview
 
-Real macOS screenshots of the desktop application. The preview follows the document's color scheme; the app offers Light, System, and Dark modes.
+Native-resolution macOS screenshots of the desktop application (2240 × 1520, lossless PNG). The preview follows the document's color scheme; the app offers Light, System, and Dark modes.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/img/usingAppDark.jpg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/img/usingApp.jpg">
-  <img alt="OMR desktop: configuration updates, target directories, progress and theme controls" src="assets/img/usingApp.jpg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/img/usingAppDark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/img/usingApp.png">
+  <img alt="OMR desktop: configuration updates, target directories, progress and theme controls" src="assets/img/usingApp.png">
 </picture>
 
-[Light theme](assets/img/usingApp.jpg) · [Dark theme](assets/img/usingAppDark.jpg)
+[Light theme](assets/img/usingApp.png) · [Dark theme](assets/img/usingAppDark.png)
 
 ## Features
 
@@ -65,7 +65,7 @@ Directory detection supports Weasel on Windows (registry, then `%APPDATA%\Rime`)
 
 The app checks for updates at startup. Click **检查应用更新** in the sidebar to check manually. When a new version is available, read its notes and click **下载并安装** to download, verify and install it. The app restarts after installation. Installation is blocked while a Rime configuration update is running.
 
-![Application updater with current version, prerelease preference and check result](assets/img/appUpdate.jpg)
+![Application updater with current version, prerelease preference and check result](assets/img/appUpdate.png)
 
 This screenshot shows the real state with no available update; it does not simulate a release or download progress.
 

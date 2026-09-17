@@ -8,15 +8,15 @@
 
 ## 界面演示
 
-以下为 macOS 实机截图。主界面支持亮色、跟随系统和暗色模式，截图随文档页面主题切换。
+以下为 macOS 原始分辨率实机截图（2240 × 1520，无损 PNG）。主界面支持亮色、跟随系统和暗色模式，截图随文档页面主题切换。
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/img/usingAppDark.jpg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/img/usingApp.jpg">
-  <img alt="OMR 桌面端：方案更新、目标目录、任务进度与三段式主题切换" src="assets/img/usingApp.jpg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/img/usingAppDark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/img/usingApp.png">
+  <img alt="OMR 桌面端：方案更新、目标目录、任务进度与三段式主题切换" src="assets/img/usingApp.png">
 </picture>
 
-[查看亮色界面](assets/img/usingApp.jpg) · [查看暗色界面](assets/img/usingAppDark.jpg)
+[查看亮色界面](assets/img/usingApp.png) · [查看暗色界面](assets/img/usingAppDark.png)
 
 ## 功能
 
@@ -69,7 +69,7 @@ Windows 安装包目前未配置代码签名，请从本项目 Releases 下载�
 
 应用启动后自动检查新版本，也可点击左下角 **检查应用更新**。发现新版本后，查看更新说明，点击 **下载并安装**；应用验证签名后安装并重新启动。Rime 配置更新进行中不能安装应用更新。
 
-![应用更新窗口：当前版本、测试版渠道与检查结果](assets/img/appUpdate.jpg)
+![应用更新窗口：当前版本、测试版渠道与检查结果](assets/img/appUpdate.png)
 
 截图展示尚无可用更新的状态，未模拟新版本或下载进度。
 
