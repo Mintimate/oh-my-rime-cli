@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
 import {
   BookOpen,
   CheckCircle2,
@@ -437,4 +438,9 @@ function App() {
   );
 }
 
-export default App;
+const rootElement = document.getElementById("root");
+if (!rootElement) {
+  throw new Error("找不到应用挂载节点 #root");
+}
+
+createRoot(rootElement).render(<App />);
