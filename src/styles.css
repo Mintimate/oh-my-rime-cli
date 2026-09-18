@@ -110,7 +110,51 @@ button:disabled {
   margin-top: auto;
   display: grid;
   gap: 17px;
-  padding: 0 9px;
+  padding: 20px 9px 0;
+}
+.project-links {
+  display: grid;
+  gap: 4px;
+}
+.project-links a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 8px;
+  border-radius: 8px;
+  color: #68758b;
+  font-size: 12px;
+  text-decoration: none;
+  transition: 0.18s ease;
+}
+.project-links a span {
+  flex: 1;
+}
+.project-links a svg {
+  flex-shrink: 0;
+}
+.project-links a:hover,
+.project-links a:focus-visible {
+  color: #2e6cf6;
+  background: #edf3ff;
+}
+.project-links a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+[data-theme="dark"] .project-links a {
+  color: #aeb8c9;
+}
+[data-theme="dark"] .project-links a:hover,
+[data-theme="dark"] .project-links a:focus-visible {
+  color: #9cbcff;
+  background: #273452;
+}
+.project-links-error {
+  padding: 0 8px;
+  color: #d65c65;
+  font-size: 11px;
+  line-height: 1.6;
 }
 .theme-switch {
   display: grid;

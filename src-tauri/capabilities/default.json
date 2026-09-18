@@ -3,5 +3,15 @@
   "identifier": "default",
   "description": "Default permissions for Oh My Rime",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-start-dragging"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://www.mintimate.cc" },
+        { "url": "https://github.com/Mintimate/oh-my-rime-cli" }
+      ]
+    }
+  ]
 }

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import "./styles.css";
 import { AppUpdate } from "./AppUpdate";
+import { ProjectLinks } from "./ProjectLinks";
 
 type TargetOption = { label: string; path: string };
 type SystemInfo = { os: string; options: TargetOption[] };
@@ -237,6 +238,7 @@ function App() {
           </button>
         </nav>
         <div className="sidebar-bottom">
+          <ProjectLinks />
           <div className="theme-switch" role="group" aria-label="外观">
             {themes.map(({ value, label, icon: Icon }) => (
               <button
