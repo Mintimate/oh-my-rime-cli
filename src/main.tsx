@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -85,6 +85,11 @@ function App() {
   });
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [targetDir, setTargetDir] = useState("");
+  const [openingDirectory, setOpeningDirectory] = useState(false);
+  const [directoryError, setDirectoryError] = useState<{
+    path: string;
+    message: string;
+  } | null>(null);
   const [customUrl, setCustomUrl] = useState("");
   const [running, setRunning] = useState(false);
   const [appInstalling, setAppInstalling] = useState(false);
@@ -151,6 +156,28 @@ function App() {
       if (selected) setTargetDir(selected);
     } catch (error) {
       addLog(`打开目录选择器失败：${String(error)}`);
+    }
+  }
+
+  async function openTargetDirectory() {
+    if (!targetDir.trim() || openingDirectory) return;
+    setDirectoryError(null);
+    if (!isTauri()) {
+      setDirectoryError({
+        path: targetDir,
+        message: "请在桌面应用中打开本地目录。",
+      });
+      return;
+    }
+    setOpeningDirectory(true);
+    try {
+      await invoke("open_directory_in_manager", { path: targetDir });
+    } catch (error) {
+      const message = `打开目录失败：${String(error)}`;
+      setDirectoryError({ path: targetDir, message });
+      addLog(message);
+    } finally {
+      setOpeningDirectory(false);
     }
   }
 
@@ -389,7 +416,31 @@ function App() {
                     onChange={(event) => setTargetDir(event.target.value)}
                     placeholder="/path/to/rime"
                   />
-                  <p className="selected-path">当前：{selectedLabel}</p>
+                  <div className="target-footer">
+                    <p className="selected-path">当前：{selectedLabel}</p>
+                    <button
+                      className="ghost-button open-directory-button"
+                      onClick={() => void openTargetDirectory()}
+                      disabled={!targetDir.trim() || openingDirectory}
+                      title={
+                        targetDir.trim()
+                          ? `在文件管理器中打开：${targetDir}`
+                          : "请先选择或填写目标目录"
+                      }
+                    >
+                      {openingDirectory ? (
+                        <LoaderCircle size={14} className="spin" />
+                      ) : (
+                        <FolderOpen size={14} />
+                      )}
+                      打开目录
+                    </button>
+                  </div>
+                  {directoryError?.path === targetDir && (
+                    <p className="directory-error" role="alert">
+                      {directoryError.message}
+                    </p>
+                  )}
                 </div>
                 <div className="panel-card progress-card">
                   <div className="section-heading compact">

@@ -388,7 +388,7 @@ fn backup_root(target: &Path) -> PathBuf {
             target.file_name().unwrap_or_default().to_string_lossy()
         ))
 }
-fn expand_home(path: &str) -> PathBuf {
+pub(crate) fn expand_home(path: &str) -> PathBuf {
     if path == "~" {
         return PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| path.into()));
     }

@@ -79,18 +79,22 @@ async fn select_directory() -> Option<String> {
 }
 
 #[tauri::command]
-fn open_directory_in_manager(path: String) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    let command = ("open", vec![path.as_str()]);
-    #[cfg(target_os = "linux")]
-    let command = ("xdg-open", vec![path.as_str()]);
-    #[cfg(target_os = "windows")]
-    let command = ("explorer", vec![path.as_str()]);
-    std::process::Command::new(command.0)
-        .args(command.1)
-        .spawn()
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+async fn open_directory_in_manager(path: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if path.trim().is_empty() {
+            return Err("请先选择或填写目标目录".into());
+        }
+        let path = rime_core::expand_home(&path)
+            .canonicalize()
+            .map_err(|error| format!("目录不存在或无法访问：{error}"))?;
+        if !path.is_dir() {
+            return Err("所选路径不是目录".into());
+        }
+        tauri_plugin_opener::open_path(&path, None::<&str>)
+            .map_err(|error| format!("无法启动文件管理器：{error}"))
+    })
+    .await
+    .map_err(|error| format!("打开目录任务异常：{error}"))?
 }
 
 pub fn run() {

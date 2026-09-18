@@ -485,10 +485,46 @@ input {
   background: #fff;
   font-size: 11px;
 }
+.target-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
 .selected-path {
-  margin-top: 8px;
   color: #99a2b1;
   font-size: 10px;
+}
+.open-directory-button {
+  flex-shrink: 0;
+}
+.open-directory-button:not(:disabled):hover,
+.open-directory-button:focus-visible {
+  color: #2e6cf6;
+  border-color: #b9c9ee;
+  background: #edf3ff;
+}
+.open-directory-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+[data-theme="dark"] .open-directory-button {
+  color: #aeb8c9;
+  border-color: #405581;
+}
+[data-theme="dark"] .open-directory-button:not(:disabled):hover,
+[data-theme="dark"] .open-directory-button:focus-visible {
+  color: #9cbcff;
+  background: #273452;
+}
+.directory-error {
+  margin-top: 8px;
+  color: #d65c65;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 .progress-card {
   padding-bottom: 18px;
